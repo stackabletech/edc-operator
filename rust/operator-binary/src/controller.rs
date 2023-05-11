@@ -4,7 +4,7 @@ use crate::product_logging::{extend_role_group_config_map, resolve_vector_aggreg
 use crate::OPERATOR_NAME;
 
 use crate::crd::{
-    Container, EDCCluster, EDCClusterStatus, HelloRole, ServerConfig, APP_NAME, HELLO_COLOR,
+    ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, HELLO_COLOR,
     HELLO_RECIPIENT, HTTP_PORT, HTTP_PORT_NAME, INDEX_HTML, NGINX_CONF, STACKABLE_CONFIG_DIR,
     STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR, STACKABLE_CONFIG_MOUNT_DIR_NAME,
     STACKABLE_LOG_CONFIG_MOUNT_DIR, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR,
@@ -189,14 +189,14 @@ pub async fn reconcile_hello(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Ac
         &transform_all_roles_to_config(
             hello.as_ref(),
             [(
-                HelloRole::Server.to_string(),
+                EDCRole::Connector.to_string(),
                 (
                     vec![
                         PropertyNameKind::Env,
                         PropertyNameKind::Cli,
                         PropertyNameKind::File(INDEX_HTML.to_string()),
                     ],
-                    hello.spec.servers.clone().context(NoServerRoleSnafu)?,
+                    hello.spec.connectors.clone().context(NoServerRoleSnafu)?,
                 ),
             )]
             .into(),
@@ -209,7 +209,7 @@ pub async fn reconcile_hello(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Ac
     .context(InvalidProductConfigSnafu)?;
 
     let server_config = validated_config
-        .get(&HelloRole::Server.to_string())
+        .get(&EDCRole::Connector.to_string())
         .map(Cow::Borrowed)
         .unwrap_or_default();
 
@@ -256,7 +256,7 @@ pub async fn reconcile_hello(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Ac
         let rolegroup = hello.server_rolegroup_ref(rolegroup_name);
 
         let config = hello
-            .merged_config(&HelloRole::Server, &rolegroup.role_group)
+            .merged_config(&EDCRole::Connector, &rolegroup.role_group)
             .context(FailedToResolveResourceConfigSnafu)?;
 
         let rg_service = build_rolegroup_service(&hello, &resolved_product_image, &rolegroup)?;
@@ -328,7 +328,7 @@ pub fn build_server_role_service(
     hello: &EDCCluster,
     resolved_product_image: &ResolvedProductImage,
 ) -> Result<Service> {
-    let role_name = HelloRole::Server.to_string();
+    let role_name = EDCRole::Connector.to_string();
 
     let role_svc_name = hello
         .server_role_service_name()
@@ -362,7 +362,7 @@ fn build_server_rolegroup_config_map(
     resolved_product_image: &ResolvedProductImage,
     rolegroup: &RoleGroupRef<EDCCluster>,
     role_group_config: &HashMap<PropertyNameKind, BTreeMap<String, String>>,
-    merged_config: &ServerConfig,
+    merged_config: &ConnectorConfig,
     vector_aggregator_address: Option<&str>,
 ) -> Result<ConfigMap> {
     let mut hello_index_html = String::new();
@@ -472,13 +472,13 @@ fn build_server_rolegroup_statefulset(
     resolved_product_image: &ResolvedProductImage,
     rolegroup_ref: &RoleGroupRef<EDCCluster>,
     metastore_config: &HashMap<PropertyNameKind, BTreeMap<String, String>>,
-    merged_config: &ServerConfig,
+    merged_config: &ConnectorConfig,
     sa_name: &str,
 ) -> Result<StatefulSet> {
     // TODO this function still needs to be checked
     let rolegroup = hello
         .spec
-        .servers
+        .connectors
         .as_ref()
         .context(NoServerRoleSnafu)?
         .role_groups
@@ -594,7 +594,7 @@ fn build_server_rolegroup_statefulset(
             Some(ContainerLogConfigChoice::Custom(CustomContainerLogConfig {
                 custom: ConfigMapLogConfig { config_map },
             })),
-    }) = merged_config.logging.containers.get(&Container::Hello)
+    }) = merged_config.logging.containers.get(&Container::Connector)
     {
         pod_builder.add_volume(Volume {
             name: STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME.to_string(),

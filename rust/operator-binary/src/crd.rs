@@ -1,8 +1,5 @@
 //! This file contains the definition of all the custom resources that this Operator manages.
-//! In this case, it is only the `HelloCluster`.
-//!
-//! When writing a new Operator, this is often a good starting point. Edits made here will ripple
-//! through the codebase, so it's easy to follow up from here.
+//! In this case, it is only the `EDCCluster`.
 use crate::affinity::get_affinity;
 use serde::{Deserialize, Serialize};
 use snafu::{OptionExt, ResultExt, Snafu};
@@ -45,9 +42,50 @@ pub const NGINX_CONF: &str = "nginx.conf";
 // HTML file keys
 pub const HELLO_RECIPIENT: &str = "RECIPIENT";
 pub const HELLO_COLOR: &str = "COLOR";
+// config properties
+pub const EDC_HOSTNAME: &str = "edc.hostname";
+pub const EDC_IDS_ID: &str = "edc.ids.id";
+pub const WEB_HTTP_PORT: &str = "web.http.port";
+pub const WEB_HTTP_PATH: &str = "web.http.path";
+pub const WEB_HTTP_CONTROL_PORT: &str = "web.http.control.port";
+pub const WEB_HTTP_CONTROL_PATH: &str = "web.http.control.path";
+pub const WEB_HTTP_MANAGEMENT_PORT: &str = "web.http.management.port";
+pub const WEB_HTTP_MANAGEMENT_PATH: &str = "web.http.management.path";
+pub const WEB_HTTP_IDS_PORT: &str = "web.http.ids.port";
+pub const WEB_HTTP_IDS_PATH: &str = "web.http.ids.path";
+pub const WEB_HTTP_PROTOCOL_PORT: &str = "web.http.protocol.port";
+pub const WEB_HTTP_PROTOCOL_PATH: &str = "web.http.protocol.path";
+pub const WEB_HTTP_PUBLIC_PORT: &str = "web.http.public.port";
+pub const WEB_HTTP_PUBLIC_PATH: &str = "web.http.public.path";
+pub const EDC_DATAPLANE_TOKEN_VALIDATION_ENDPOINT: &str = "edc.dataplane.token.validation.endpoint";
+pub const IDS_WEBHOOK_ADRESS: &str = "ids.webhook.address";
+pub const EDC_RECEIVER_HTTP_ENDPOINT: &str = "edc.receiver.http.endpoint";
+pub const EDC_PUBLIC_KEY_ALIAS: &str = "edc.public.key.alias";
+pub const EDC_TRANSFER_DATAPLANE_TOKEN_SIGNER_PRIVATEKEY_ALIAS: &str =
+    "edc.transfer.dataplane.token.signer.privatekey.alias";
+pub const EDC_TRANSFER_PROXY_TOKEN_SIGNER_PRIVATEKEY_ALIAS: &str =
+    "edc.transfer.proxy.token.signer.privatekey.alias";
+pub const EDC_TRANSFER_PROXY_TOKEN_VERIFIER_PUBLICKEY_ALIAS: &str =
+    "edc.transfer.proxy.token.verifier.publickey.alias";
+pub const EDC_VAULT_HASHICORP_URL: &str = "edc.vault.hashicorp.url";
+pub const EDC_VAULT_HASHICORP_TOKEN: &str = "edc.vault.hashicorp.token";
+pub const EDC_VAULT_HASHICORP_TIMEOUT_SECONDS: &str = "edc.vault.hashicorp.timeout.seconds";
+pub const EDC_IONOS_ACCESS_KEY: &str = "edc.ionos.access.key";
+pub const EDC_IONOS_SECRET_KEY: &str = "edc.ionos.secret.key";
+pub const EDC_IONOS_ENDPOINT: &str = "edc.ionos.endpoint";
 // default ports
 pub const HTTP_PORT_NAME: &str = "http";
-pub const HTTP_PORT: u16 = 8080;
+pub const HTTP_PORT: u16 = 19191;
+pub const CONTROL_PORT_NAME: &str = "control";
+pub const CONTROL_PORT: u16 = 19192;
+pub const MANAGEMENT_PORT_NAME: &str = "management";
+pub const MANAGEMENT_PORT: u16 = 19193;
+pub const IDS_PORT_NAME: &str = "ids";
+pub const IDS_PORT: u16 = 19194;
+pub const PROTOCOL_PORT_NAME: &str = "protocol";
+pub const PROTOCOL_PORT: u16 = 19195;
+pub const PUBLIC_PORT_NAME: &str = "public";
+pub const PUBLIC_PORT: u16 = 19291;
 
 #[derive(Snafu, Debug)]
 pub enum Error {
@@ -82,7 +120,7 @@ pub struct EDCClusterSpec {
     /// The image to use. In this example this will be an nginx image
     pub image: ProductImage,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub servers: Option<Role<ServerConfigFragment>>,
+    pub connectors: Option<Role<ConnectorConfigFragment>>,
     pub recipient: String,
     pub color: String,
 }
@@ -134,9 +172,9 @@ impl CurrentlySupportedListenerClasses {
 
 #[derive(Display)]
 #[strum(serialize_all = "camelCase")]
-pub enum HelloRole {
+pub enum EDCRole {
     #[strum(serialize = "server")]
-    Server,
+    Connector,
 }
 
 #[derive(
@@ -155,7 +193,7 @@ pub enum HelloRole {
 #[serde(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]
 pub enum Container {
-    Hello,
+    Connector,
     Vector,
 }
 
@@ -173,7 +211,7 @@ pub enum Container {
     ),
     serde(rename_all = "camelCase")
 )]
-pub struct ServerStorageConfig {
+pub struct ConnectorStorageConfig {
     #[fragment_attrs(serde(default))]
     pub data: PvcConfig,
 }
@@ -192,18 +230,18 @@ pub struct ServerStorageConfig {
     ),
     serde(rename_all = "camelCase")
 )]
-pub struct ServerConfig {
+pub struct ConnectorConfig {
     #[fragment_attrs(serde(default))]
-    pub resources: Resources<ServerStorageConfig, NoRuntimeLimits>,
+    pub resources: Resources<ConnectorStorageConfig, NoRuntimeLimits>,
     #[fragment_attrs(serde(default))]
     pub logging: Logging<Container>,
     #[fragment_attrs(serde(default))]
     pub affinity: StackableAffinity,
 }
 
-impl ServerConfig {
-    fn default_config(cluster_name: &str, role: &HelloRole) -> ServerConfigFragment {
-        ServerConfigFragment {
+impl ConnectorConfig {
+    fn default_config(cluster_name: &str, role: &EDCRole) -> ConnectorConfigFragment {
+        ConnectorConfigFragment {
             resources: ResourcesFragment {
                 cpu: CpuLimitsFragment {
                     min: Some(Quantity("200m".to_owned())),
@@ -213,7 +251,7 @@ impl ServerConfig {
                     limit: Some(Quantity("2Gi".to_owned())),
                     runtime_limits: NoRuntimeLimitsFragment {},
                 },
-                storage: ServerStorageConfigFragment {
+                storage: ConnectorStorageConfigFragment {
                     data: PvcConfigFragment {
                         capacity: Some(Quantity("2Gi".to_owned())),
                         storage_class: None,
@@ -241,12 +279,12 @@ impl Default for ServiceType {
     }
 }
 
-impl Configuration for ServerConfigFragment {
+impl Configuration for ConnectorConfigFragment {
     type Configurable = EDCCluster;
 
     fn compute_env(
         &self,
-        _hello: &Self::Configurable,
+        _connector: &Self::Configurable,
         _role_name: &str,
     ) -> Result<BTreeMap<String, Option<String>>, ConfigError> {
         let result = BTreeMap::new();
@@ -256,7 +294,7 @@ impl Configuration for ServerConfigFragment {
 
     fn compute_cli(
         &self,
-        _hello: &Self::Configurable,
+        _connector: &Self::Configurable,
         _role_name: &str,
     ) -> Result<BTreeMap<String, Option<String>>, ConfigError> {
         let result = BTreeMap::new();
@@ -266,7 +304,7 @@ impl Configuration for ServerConfigFragment {
 
     fn compute_files(
         &self,
-        hello: &Self::Configurable,
+        connector: &Self::Configurable,
         _role_name: &str,
         file: &str,
     ) -> Result<BTreeMap<String, Option<String>>, ConfigError> {
@@ -276,9 +314,12 @@ impl Configuration for ServerConfigFragment {
             INDEX_HTML => {
                 result.insert(
                     HELLO_RECIPIENT.to_owned(),
-                    Some(hello.spec.recipient.to_owned()),
+                    Some(connector.spec.recipient.to_owned()),
                 );
-                result.insert(HELLO_COLOR.to_owned(), Some(hello.spec.color.to_owned()));
+                result.insert(
+                    HELLO_COLOR.to_owned(),
+                    Some(connector.spec.color.to_owned()),
+                );
             }
             _ => {}
         }
@@ -316,7 +357,7 @@ impl EDCCluster {
     pub fn server_rolegroup_ref(&self, group_name: impl Into<String>) -> RoleGroupRef<EDCCluster> {
         RoleGroupRef {
             cluster: ObjectRef::from_obj(self),
-            role: HelloRole::Server.to_string(),
+            role: EDCRole::Connector.to_string(),
             role_group: group_name.into(),
         }
     }
@@ -329,7 +370,7 @@ impl EDCCluster {
         let ns = self.metadata.namespace.clone().context(NoNamespaceSnafu)?;
         Ok(self
             .spec
-            .servers
+            .connectors
             .iter()
             .flat_map(|role| &role.role_groups)
             // Order rolegroups consistently, to avoid spurious downstream rewrites
@@ -346,16 +387,20 @@ impl EDCCluster {
             }))
     }
 
-    pub fn get_role(&self, role: &HelloRole) -> Option<&Role<ServerConfigFragment>> {
+    pub fn get_role(&self, role: &EDCRole) -> Option<&Role<ConnectorConfigFragment>> {
         match role {
-            HelloRole::Server => self.spec.servers.as_ref(),
+            EDCRole::Connector => self.spec.connectors.as_ref(),
         }
     }
 
     /// Retrieve and merge resource configs for role and role groups
-    pub fn merged_config(&self, role: &HelloRole, role_group: &str) -> Result<ServerConfig, Error> {
+    pub fn merged_config(
+        &self,
+        role: &EDCRole,
+        role_group: &str,
+    ) -> Result<ConnectorConfig, Error> {
         // Initialize the result with all default values as baseline
-        let conf_defaults = ServerConfig::default_config(&self.name_any(), role);
+        let conf_defaults = ConnectorConfig::default_config(&self.name_any(), role);
 
         let role = self.get_role(role).context(MissingMetaStoreRoleSnafu)?;
 
@@ -393,7 +438,7 @@ impl EDCCluster {
     }
 }
 
-/// Reference to a single `Pod` that is a component of a [`HelloCluster`]
+/// Reference to a single `Pod` that is a component of a [`EDCCluster`]
 /// Used for service discovery.
 pub struct PodRef {
     pub namespace: String,
