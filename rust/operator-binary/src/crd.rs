@@ -1,6 +1,6 @@
 //! This file contains the definition of all the custom resources that this Operator manages.
 //! In this case, it is only the `HelloCluster`.
-//! 
+//!
 //! When writing a new Operator, this is often a good starting point. Edits made here will ripple
 //! through the codebase, so it's easy to follow up from here.
 use crate::affinity::get_affinity;
@@ -28,7 +28,7 @@ use stackable_operator::{
 use std::collections::BTreeMap;
 use strum::{Display, EnumIter};
 
-pub const APP_NAME: &str = "hello";
+pub const APP_NAME: &str = "edc";
 // directories
 pub const STACKABLE_CONFIG_DIR: &str = "/stackable/config";
 pub const STACKABLE_CONFIG_DIR_NAME: &str = "config";
@@ -60,12 +60,12 @@ pub enum Error {
 #[derive(Clone, CustomResource, Debug, Deserialize, JsonSchema, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[kube(
-    group = "hello.stackable.tech",
+    group = "edc.stackable.tech",
     version = "v1alpha1",
-    kind = "HelloCluster",
-    plural = "helloclusters",
-    shortname = "hello",
-    status = "HelloClusterStatus",
+    kind = "EDCCluster",
+    plural = "edcclusters",
+    shortname = "edc",
+    status = "EDCClusterStatus",
     namespaced,
     crates(
         kube_core = "stackable_operator::kube::core",
@@ -73,9 +73,9 @@ pub enum Error {
         schemars = "stackable_operator::schemars"
     )
 )]
-pub struct HelloClusterSpec {
+pub struct EDCClusterSpec {
     /// General Hive metastore cluster settings
-    pub cluster_config: HelloClusterConfig,
+    pub cluster_config: EDCClusterConfig,
     /// Cluster operations like pause reconciliation or cluster stop.
     #[serde(default)]
     pub cluster_operation: ClusterOperation,
@@ -89,7 +89,7 @@ pub struct HelloClusterSpec {
 
 #[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct HelloClusterConfig {
+pub struct EDCClusterConfig {
     /// Name of the Vector aggregator discovery ConfigMap.
     /// It must contain the key `ADDRESS` with the address of the Vector aggregator.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -242,7 +242,7 @@ impl Default for ServiceType {
 }
 
 impl Configuration for ServerConfigFragment {
-    type Configurable = HelloCluster;
+    type Configurable = EDCCluster;
 
     fn compute_env(
         &self,
@@ -289,11 +289,11 @@ impl Configuration for ServerConfigFragment {
 
 #[derive(Clone, Default, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct HelloClusterStatus {
+pub struct EDCClusterStatus {
     pub conditions: Vec<ClusterCondition>,
 }
 
-impl HasStatusCondition for HelloCluster {
+impl HasStatusCondition for EDCCluster {
     fn conditions(&self) -> Vec<ClusterCondition> {
         match &self.status {
             Some(status) => status.conditions.clone(),
@@ -306,17 +306,14 @@ impl HasStatusCondition for HelloCluster {
 #[snafu(display("object has no namespace associated"))]
 pub struct NoNamespaceError;
 
-impl HelloCluster {
+impl EDCCluster {
     /// The name of the role-level load-balanced Kubernetes `Service`
     pub fn server_role_service_name(&self) -> Option<&str> {
         self.metadata.name.as_deref()
     }
 
     /// Metadata about a server rolegroup
-    pub fn server_rolegroup_ref(
-        &self,
-        group_name: impl Into<String>,
-    ) -> RoleGroupRef<HelloCluster> {
+    pub fn server_rolegroup_ref(&self, group_name: impl Into<String>) -> RoleGroupRef<EDCCluster> {
         RoleGroupRef {
             cluster: ObjectRef::from_obj(self),
             role: HelloRole::Server.to_string(),

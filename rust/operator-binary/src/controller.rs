@@ -1,10 +1,10 @@
-//! Ensures that `Pod`s are configured and running for each [`HelloCluster`]
+//! Ensures that `Pod`s are configured and running for each [`EDCCluster`]
 use crate::config::{generate_index_html, generate_nginx_conf};
 use crate::product_logging::{extend_role_group_config_map, resolve_vector_aggregator_address};
 use crate::OPERATOR_NAME;
 
 use crate::crd::{
-    Container, HelloCluster, HelloClusterStatus, HelloRole, ServerConfig, APP_NAME, HELLO_COLOR,
+    Container, EDCCluster, EDCClusterStatus, HelloRole, ServerConfig, APP_NAME, HELLO_COLOR,
     HELLO_RECIPIENT, HTTP_PORT, HTTP_PORT_NAME, INDEX_HTML, NGINX_CONF, STACKABLE_CONFIG_DIR,
     STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR, STACKABLE_CONFIG_MOUNT_DIR_NAME,
     STACKABLE_LOG_CONFIG_MOUNT_DIR, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR,
@@ -79,9 +79,7 @@ pub enum Error {
     #[snafu(display("failed to calculate global service name"))]
     GlobalServiceNameNotFound,
     #[snafu(display("failed to calculate service name for role {rolegroup}"))]
-    RoleGroupServiceNameNotFound {
-        rolegroup: RoleGroupRef<HelloCluster>,
-    },
+    RoleGroupServiceNameNotFound { rolegroup: RoleGroupRef<EDCCluster> },
     #[snafu(display("failed to apply global Service"))]
     ApplyRoleService {
         source: stackable_operator::error::Error,
@@ -89,22 +87,22 @@ pub enum Error {
     #[snafu(display("failed to apply Service for {rolegroup}"))]
     ApplyRoleGroupService {
         source: stackable_operator::error::Error,
-        rolegroup: RoleGroupRef<HelloCluster>,
+        rolegroup: RoleGroupRef<EDCCluster>,
     },
     #[snafu(display("failed to build ConfigMap for {rolegroup}"))]
     BuildRoleGroupConfig {
         source: stackable_operator::error::Error,
-        rolegroup: RoleGroupRef<HelloCluster>,
+        rolegroup: RoleGroupRef<EDCCluster>,
     },
     #[snafu(display("failed to apply ConfigMap for {rolegroup}"))]
     ApplyRoleGroupConfig {
         source: stackable_operator::error::Error,
-        rolegroup: RoleGroupRef<HelloCluster>,
+        rolegroup: RoleGroupRef<EDCCluster>,
     },
     #[snafu(display("failed to apply StatefulSet for {rolegroup}"))]
     ApplyRoleGroupStatefulSet {
         source: stackable_operator::error::Error,
-        rolegroup: RoleGroupRef<HelloCluster>,
+        rolegroup: RoleGroupRef<EDCCluster>,
     },
     #[snafu(display("failed to generate product config"))]
     GenerateProductConfig {
@@ -180,7 +178,7 @@ impl ReconcilerError for Error {
     }
 }
 
-pub async fn reconcile_hello(hello: Arc<HelloCluster>, ctx: Arc<Ctx>) -> Result<Action> {
+pub async fn reconcile_hello(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action> {
     tracing::info!("Starting reconcile");
     let client = &ctx.client;
     let resolved_product_image: ResolvedProductImage =
@@ -306,7 +304,7 @@ pub async fn reconcile_hello(hello: Arc<HelloCluster>, ctx: Arc<Ctx>) -> Result<
     let cluster_operation_cond_builder =
         ClusterOperationsConditionBuilder::new(&hello.spec.cluster_operation);
 
-    let status = HelloClusterStatus {
+    let status = EDCClusterStatus {
         conditions: compute_conditions(
             hello.as_ref(),
             &[&ss_cond_builder, &cluster_operation_cond_builder],
@@ -327,7 +325,7 @@ pub async fn reconcile_hello(hello: Arc<HelloCluster>, ctx: Arc<Ctx>) -> Result<
 }
 
 pub fn build_server_role_service(
-    hello: &HelloCluster,
+    hello: &EDCCluster,
     resolved_product_image: &ResolvedProductImage,
 ) -> Result<Service> {
     let role_name = HelloRole::Server.to_string();
@@ -360,9 +358,9 @@ pub fn build_server_role_service(
 
 /// The rolegroup [`ConfigMap`] configures the rolegroup based on the configuration given by the administrator
 fn build_server_rolegroup_config_map(
-    hello: &HelloCluster,
+    hello: &EDCCluster,
     resolved_product_image: &ResolvedProductImage,
-    rolegroup: &RoleGroupRef<HelloCluster>,
+    rolegroup: &RoleGroupRef<EDCCluster>,
     role_group_config: &HashMap<PropertyNameKind, BTreeMap<String, String>>,
     merged_config: &ServerConfig,
     vector_aggregator_address: Option<&str>,
@@ -430,9 +428,9 @@ fn build_server_rolegroup_config_map(
 ///
 /// This is mostly useful for internal communication between peers, or for clients that perform client-side load balancing.
 fn build_rolegroup_service(
-    hello: &HelloCluster,
+    hello: &EDCCluster,
     resolved_product_image: &ResolvedProductImage,
-    rolegroup: &RoleGroupRef<HelloCluster>,
+    rolegroup: &RoleGroupRef<EDCCluster>,
 ) -> Result<Service> {
     Ok(Service {
         metadata: ObjectMetaBuilder::new()
@@ -470,9 +468,9 @@ fn build_rolegroup_service(
 /// The [`Pod`](`stackable_operator::k8s_openapi::api::core::v1::Pod`)s are accessible through the
 /// corresponding [`Service`] (from [`build_rolegroup_service`]).
 fn build_server_rolegroup_statefulset(
-    hello: &HelloCluster,
+    hello: &EDCCluster,
     resolved_product_image: &ResolvedProductImage,
-    rolegroup_ref: &RoleGroupRef<HelloCluster>,
+    rolegroup_ref: &RoleGroupRef<EDCCluster>,
     metastore_config: &HashMap<PropertyNameKind, BTreeMap<String, String>>,
     merged_config: &ServerConfig,
     sa_name: &str,
@@ -664,7 +662,7 @@ fn build_server_rolegroup_statefulset(
     })
 }
 
-pub fn error_policy(_obj: Arc<HelloCluster>, _error: &Error, _ctx: Arc<Ctx>) -> Action {
+pub fn error_policy(_obj: Arc<EDCCluster>, _error: &Error, _ctx: Arc<Ctx>) -> Action {
     Action::requeue(Duration::from_secs(5))
 }
 

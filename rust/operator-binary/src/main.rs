@@ -7,7 +7,7 @@ mod product_logging;
 use crate::controller::HELLO_CONTROLLER_NAME;
 
 use clap::{crate_description, crate_version, Parser};
-use crd::{HelloCluster, APP_NAME};
+use crd::{EDCCluster, APP_NAME};
 use futures::stream::StreamExt;
 use stackable_operator::{
     cli::{Command, ProductOperatorRun},
@@ -39,7 +39,7 @@ struct Opts {
 async fn main() -> anyhow::Result<()> {
     let opts = Opts::parse();
     match opts.cmd {
-        Command::Crd => HelloCluster::print_yaml_schema()?,
+        Command::Crd => EDCCluster::print_yaml_schema()?,
         Command::Run(ProductOperatorRun {
             product_config,
             watch_namespace,
@@ -68,7 +68,7 @@ async fn main() -> anyhow::Result<()> {
                 stackable_operator::client::create_client(Some(OPERATOR_NAME.to_string())).await?;
 
             Controller::new(
-                watch_namespace.get_api::<HelloCluster>(&client),
+                watch_namespace.get_api::<EDCCluster>(&client),
                 watcher::Config::default(),
             )
             .owns(
