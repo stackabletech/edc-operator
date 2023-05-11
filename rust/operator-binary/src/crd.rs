@@ -39,6 +39,7 @@ pub const STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME: &str = "log-config-mount";
 pub const INDEX_HTML: &str = "index.html";
 pub const HIVE_LOG4J2_PROPERTIES: &str = "hive-log4j2.properties";
 pub const NGINX_CONF: &str = "nginx.conf";
+pub const CONFIG_PROPERTIES: &str = "config.properties";
 // HTML file keys
 pub const HELLO_RECIPIENT: &str = "RECIPIENT";
 pub const HELLO_COLOR: &str = "COLOR";
@@ -72,7 +73,7 @@ pub const EDC_VAULT_HASHICORP_TOKEN: &str = "edc.vault.hashicorp.token";
 pub const EDC_VAULT_HASHICORP_TIMEOUT_SECONDS: &str = "edc.vault.hashicorp.timeout.seconds";
 pub const EDC_IONOS_ACCESS_KEY: &str = "edc.ionos.access.key";
 pub const EDC_IONOS_SECRET_KEY: &str = "edc.ionos.secret.key";
-pub const EDC_IONOS_ENDPOINT: &str = "edc.ionos.endpoint";
+pub const EDC_IONOS_ENDPOINT: &str = "edc.ionos.endpointsdlökfj";
 // default ports
 pub const HTTP_PORT_NAME: &str = "http";
 pub const HTTP_PORT: u16 = 19191;
@@ -304,24 +305,102 @@ impl Configuration for ConnectorConfigFragment {
 
     fn compute_files(
         &self,
-        connector: &Self::Configurable,
+        edc: &Self::Configurable,
         _role_name: &str,
         file: &str,
     ) -> Result<BTreeMap<String, Option<String>>, ConfigError> {
+        let name = edc.name_unchecked();
+
         let mut result = BTreeMap::new();
 
-        match file {
-            INDEX_HTML => {
-                result.insert(
-                    HELLO_RECIPIENT.to_owned(),
-                    Some(connector.spec.recipient.to_owned()),
-                );
-                result.insert(
-                    HELLO_COLOR.to_owned(),
-                    Some(connector.spec.color.to_owned()),
-                );
-            }
-            _ => {}
+        if file == CONFIG_PROPERTIES {
+            result.insert(EDC_HOSTNAME.to_owned(), Some(name.to_owned()));
+            result.insert(EDC_IDS_ID.to_owned(), Some(format!("urn:connector:{name}")));
+            // Ports
+            result.insert(WEB_HTTP_PORT.to_owned(), Some(HTTP_PORT.to_string()));
+            result.insert(WEB_HTTP_PATH.to_owned(), Some("/api".to_owned()));
+            result.insert(
+                WEB_HTTP_CONTROL_PORT.to_owned(),
+                Some(CONTROL_PORT.to_string()),
+            );
+            result.insert(
+                WEB_HTTP_CONTROL_PATH.to_owned(),
+                Some("/control".to_owned()),
+            );
+            result.insert(
+                WEB_HTTP_MANAGEMENT_PORT.to_owned(),
+                Some(MANAGEMENT_PORT.to_string()),
+            );
+            result.insert(
+                WEB_HTTP_MANAGEMENT_PATH.to_owned(),
+                Some("/api/v1/data".to_owned()),
+            );
+            result.insert(WEB_HTTP_IDS_PORT.to_owned(), Some(IDS_PORT.to_string()));
+            result.insert(WEB_HTTP_IDS_PATH.to_owned(), Some("/api/v1/ids".to_owned()));
+            result.insert(
+                WEB_HTTP_PROTOCOL_PORT.to_owned(),
+                Some(PROTOCOL_PORT.to_string()),
+            );
+            result.insert(
+                WEB_HTTP_PROTOCOL_PATH.to_owned(),
+                Some("/dataplane".to_owned()),
+            );
+            result.insert(
+                WEB_HTTP_PUBLIC_PORT.to_owned(),
+                Some(PUBLIC_PORT.to_string()),
+            );
+            result.insert(WEB_HTTP_PUBLIC_PATH.to_owned(), Some("/public".to_owned()));
+
+            result.insert(
+                EDC_DATAPLANE_TOKEN_VALIDATION_ENDPOINT.to_owned(),
+                Some(format!("http://{}:{}/control/token", name, CONTROL_PORT)),
+            );
+            result.insert(
+                IDS_WEBHOOK_ADRESS.to_owned(),
+                Some(format!("http://{}:{}", name, IDS_PORT)),
+            );
+
+            result.insert(
+                EDC_RECEIVER_HTTP_ENDPOINT.to_owned(),
+                Some("http://backend:4000/receiver/urn:connector:provider/callback".to_owned()),
+            ); // TODO backend URL shouldn't be hardcoded here. Possibly part of the CRD?
+            result.insert(
+                EDC_PUBLIC_KEY_ALIAS.to_owned(),
+                Some("public-key".to_owned()),
+            );
+            result.insert(
+                EDC_TRANSFER_DATAPLANE_TOKEN_SIGNER_PRIVATEKEY_ALIAS.to_owned(),
+                Some("1".to_owned()),
+            );
+            result.insert(
+                EDC_TRANSFER_PROXY_TOKEN_SIGNER_PRIVATEKEY_ALIAS.to_owned(),
+                Some("1".to_owned()),
+            );
+            result.insert(
+                EDC_TRANSFER_PROXY_TOKEN_VERIFIER_PUBLICKEY_ALIAS.to_owned(),
+                Some("public-key".to_owned()),
+            );
+
+            result.insert(
+                EDC_VAULT_HASHICORP_URL.to_owned(),
+                Some("http://hashicorp-vault:8200".to_owned()),
+            ); // TODO probably also a CRD arg
+            result.insert(
+                EDC_VAULT_HASHICORP_TOKEN.to_owned(),
+                Some("test-token".to_owned()),
+            );
+            result.insert(
+                EDC_VAULT_HASHICORP_TIMEOUT_SECONDS.to_owned(),
+                Some("30".to_owned()),
+            );
+
+            // TODO IONOS access key and secret key are from the ENV
+            result.insert(EDC_IONOS_ACCESS_KEY.to_owned(), Some("TODO".to_owned()));
+            result.insert(EDC_IONOS_SECRET_KEY.to_owned(), Some("TODO".to_owned()));
+            result.insert(
+                EDC_IONOS_ENDPOINT.to_owned(),
+                Some("s3-eu-central-1.ionoscloud.com".to_owned()),
+            );
         }
 
         Ok(result)
