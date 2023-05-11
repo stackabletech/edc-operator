@@ -68,7 +68,7 @@ pub const EDC_VAULT_HASHICORP_TOKEN: &str = "edc.vault.hashicorp.token";
 pub const EDC_VAULT_HASHICORP_TIMEOUT_SECONDS: &str = "edc.vault.hashicorp.timeout.seconds";
 pub const EDC_IONOS_ACCESS_KEY: &str = "edc.ionos.access.key";
 pub const EDC_IONOS_SECRET_KEY: &str = "edc.ionos.secret.key";
-pub const EDC_IONOS_ENDPOINT: &str = "edc.ionos.endpointsdlökfj";
+pub const EDC_IONOS_ENDPOINT: &str = "edc.ionos.endpoints";
 // default ports
 pub const HTTP_PORT_NAME: &str = "http";
 pub const HTTP_PORT: u16 = 19191;
@@ -117,8 +117,6 @@ pub struct EDCClusterSpec {
     pub image: ProductImage,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub connectors: Option<Role<ConnectorConfigFragment>>,
-    pub recipient: String,
-    pub color: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]

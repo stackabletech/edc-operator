@@ -1,0 +1,15 @@
+---
+apiVersion: edc.stackable.tech/v1alpha1
+kind: EDCCluster
+metadata:
+  name: edc-provider
+spec:
+  image:
+    custom: edc-ionos-provider:v0
+    productVersion: 0.1.0
+  clusterConfig:
+    listenerClass: external-unstable
+  connectors:
+    roleGroups:
+      default:
+        replicas: 1
