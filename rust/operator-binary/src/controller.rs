@@ -1,16 +1,16 @@
 //! Ensures that `Pod`s are configured and running for each [`EDCCluster`]
-use crate::config::{generate_index_html, generate_nginx_conf};
 use crate::product_logging::{extend_role_group_config_map, resolve_vector_aggregator_address};
 use crate::OPERATOR_NAME;
 
 use crate::crd::{
-    ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, HELLO_COLOR,
-    HELLO_RECIPIENT, HTTP_PORT, HTTP_PORT_NAME, INDEX_HTML, NGINX_CONF, STACKABLE_CONFIG_DIR,
-    STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR, STACKABLE_CONFIG_MOUNT_DIR_NAME,
-    STACKABLE_LOG_CONFIG_MOUNT_DIR, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR,
-    STACKABLE_LOG_DIR_NAME,
+    ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, CONFIG_PROPERTIES,
+    HELLO_COLOR, HELLO_RECIPIENT, HTTP_PORT, HTTP_PORT_NAME, INDEX_HTML, NGINX_CONF,
+    STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR,
+    STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR,
+    STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
+use stackable_operator::product_config::writer::to_java_properties_string;
 use stackable_operator::{
     builder::{ConfigMapBuilder, ContainerBuilder, ObjectMetaBuilder, PodBuilder},
     cluster_resources::{ClusterResourceApplyStrategy, ClusterResources},
@@ -123,6 +123,10 @@ pub enum Error {
     #[snafu(display("failed to update status"))]
     ApplyStatus {
         source: stackable_operator::error::Error,
+    },
+    #[snafu(display("failed to format runtime properties"))]
+    PropertiesWriteError {
+        source: stackable_operator::product_config::writer::PropertiesWriterError,
     },
     #[snafu(display("failed to parse db type {db_type}"))]
     InvalidDbType {
@@ -260,7 +264,7 @@ pub async fn reconcile_hello(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Ac
             .context(FailedToResolveResourceConfigSnafu)?;
 
         let rg_service = build_rolegroup_service(&hello, &resolved_product_image, &rolegroup)?;
-        let rg_configmap = build_server_rolegroup_config_map(
+        let rg_configmap = build_connector_rolegroup_config_map(
             &hello,
             &resolved_product_image,
             &rolegroup,
@@ -357,31 +361,25 @@ pub fn build_server_role_service(
 }
 
 /// The rolegroup [`ConfigMap`] configures the rolegroup based on the configuration given by the administrator
-fn build_server_rolegroup_config_map(
-    hello: &EDCCluster,
+fn build_connector_rolegroup_config_map(
+    edc: &EDCCluster,
     resolved_product_image: &ResolvedProductImage,
     rolegroup: &RoleGroupRef<EDCCluster>,
     role_group_config: &HashMap<PropertyNameKind, BTreeMap<String, String>>,
     merged_config: &ConnectorConfig,
     vector_aggregator_address: Option<&str>,
 ) -> Result<ConfigMap> {
-    let mut hello_index_html = String::new();
+    let mut config_properties = String::new();
 
     for (property_name_kind, config) in role_group_config {
         match property_name_kind {
-            PropertyNameKind::File(file_name) if file_name == INDEX_HTML => {
-                let recipient = config
-                    .get(HELLO_RECIPIENT)
-                    .map(|x| x.as_str())
-                    .unwrap_or("World");
-                let color = config
-                    .get(HELLO_COLOR)
-                    .map(|x| x.as_str())
-                    .unwrap_or("#000000");
-
-                // TODO maybe don't set these defaults in here ^
-
-                hello_index_html = generate_index_html(recipient, color);
+            PropertyNameKind::File(file_name) if file_name == CONFIG_PROPERTIES => {
+                let transformed_config: BTreeMap<String, Option<String>> = config
+                    .iter()
+                    .map(|(k, v)| (k.clone(), Some(v.clone())))
+                    .collect();
+                config_properties = to_java_properties_string(transformed_config.iter())
+                    .context(PropertiesWriteSnafu)?;
             }
             _ => {}
         }
@@ -392,20 +390,19 @@ fn build_server_rolegroup_config_map(
     cm_builder
         .metadata(
             ObjectMetaBuilder::new()
-                .name_and_namespace(hello)
+                .name_and_namespace(edc)
                 .name(rolegroup.object_name())
-                .ownerreference_from_resource(hello, None, Some(true))
+                .ownerreference_from_resource(edc, None, Some(true))
                 .context(ObjectMissingMetadataForOwnerRefSnafu)?
                 .with_recommended_labels(build_recommended_labels(
-                    hello,
+                    edc,
                     &resolved_product_image.app_version_label,
                     &rolegroup.role,
                     &rolegroup.role_group,
                 ))
                 .build(),
         )
-        .add_data(INDEX_HTML, hello_index_html)
-        .add_data(NGINX_CONF, generate_nginx_conf());
+        .add_data(CONFIG_PROPERTIES, config_properties);
 
     extend_role_group_config_map(
         rolegroup,
