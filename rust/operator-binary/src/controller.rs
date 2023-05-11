@@ -4,8 +4,9 @@ use crate::OPERATOR_NAME;
 
 use crate::crd::{
     ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, CONFIG_PROPERTIES,
-    HELLO_COLOR, HELLO_RECIPIENT, HTTP_PORT, HTTP_PORT_NAME, INDEX_HTML, NGINX_CONF,
-    STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR,
+    CONTROL_PORT, CONTROL_PORT_NAME, HTTP_PORT, HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME,
+    MANAGEMENT_PORT, MANAGEMENT_PORT_NAME, PROTOCOL_PORT, PROTOCOL_PORT_NAME, PUBLIC_PORT,
+    PUBLIC_PORT_NAME, STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR,
     STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR,
     STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME,
 };
@@ -54,7 +55,7 @@ use std::{
 use strum::EnumDiscriminants;
 use tracing::warn;
 
-pub const HELLO_CONTROLLER_NAME: &str = "hellocluster";
+pub const EDC_CONTROLLER_NAME: &str = "hellocluster";
 const DOCKER_IMAGE_BASE_NAME: &str = "hello";
 
 pub const MAX_HIVE_LOG_FILES_SIZE_IN_MIB: u32 = 10;
@@ -182,7 +183,7 @@ impl ReconcilerError for Error {
     }
 }
 
-pub async fn reconcile_hello(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action> {
+pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action> {
     tracing::info!("Starting reconcile");
     let client = &ctx.client;
     let resolved_product_image: ResolvedProductImage =
@@ -198,7 +199,7 @@ pub async fn reconcile_hello(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Ac
                     vec![
                         PropertyNameKind::Env,
                         PropertyNameKind::Cli,
-                        PropertyNameKind::File(INDEX_HTML.to_string()),
+                        PropertyNameKind::File(CONFIG_PROPERTIES.to_string()),
                     ],
                     hello.spec.connectors.clone().context(NoServerRoleSnafu)?,
                 ),
@@ -220,7 +221,7 @@ pub async fn reconcile_hello(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Ac
     let mut cluster_resources = ClusterResources::new(
         APP_NAME,
         OPERATOR_NAME,
-        HELLO_CONTROLLER_NAME,
+        EDC_CONTROLLER_NAME,
         &hello.object_ref(&()),
         ClusterResourceApplyStrategy::from(&hello.spec.cluster_operation),
     )
@@ -465,7 +466,7 @@ fn build_rolegroup_service(
 /// The [`Pod`](`stackable_operator::k8s_openapi::api::core::v1::Pod`)s are accessible through the
 /// corresponding [`Service`] (from [`build_rolegroup_service`]).
 fn build_server_rolegroup_statefulset(
-    hello: &EDCCluster,
+    edc: &EDCCluster,
     resolved_product_image: &ResolvedProductImage,
     rolegroup_ref: &RoleGroupRef<EDCCluster>,
     metastore_config: &HashMap<PropertyNameKind, BTreeMap<String, String>>,
@@ -473,7 +474,7 @@ fn build_server_rolegroup_statefulset(
     sa_name: &str,
 ) -> Result<StatefulSet> {
     // TODO this function still needs to be checked
-    let rolegroup = hello
+    let rolegroup = edc
         .spec
         .connectors
         .as_ref()
@@ -503,12 +504,8 @@ fn build_server_rolegroup_statefulset(
 
     let mut pod_builder = PodBuilder::new();
 
+    // TODO if a custom container command is needed, add it here (.command)
     let container_hello = container_builder
-        .command(vec![
-            "nginx".to_string(),
-            "-c".to_string(),
-            format!("{}/{}", STACKABLE_CONFIG_MOUNT_DIR, NGINX_CONF),
-        ])
         .image_from_product_image(resolved_product_image)
         .add_volume_mount(STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_DIR)
         .add_volume_mount(STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR)
@@ -518,6 +515,11 @@ fn build_server_rolegroup_statefulset(
             STACKABLE_LOG_CONFIG_MOUNT_DIR,
         )
         .add_container_port(HTTP_PORT_NAME, HTTP_PORT.into())
+        .add_container_port(CONTROL_PORT_NAME, CONTROL_PORT.into())
+        .add_container_port(MANAGEMENT_PORT_NAME, MANAGEMENT_PORT.into())
+        .add_container_port(IDS_PORT_NAME, IDS_PORT.into())
+        .add_container_port(PROTOCOL_PORT_NAME, PROTOCOL_PORT.into())
+        .add_container_port(PUBLIC_PORT_NAME, PUBLIC_PORT.into())
         .resources(merged_config.resources.clone().into())
         .readiness_probe(Probe {
             initial_delay_seconds: Some(10),
@@ -543,7 +545,7 @@ fn build_server_rolegroup_statefulset(
     pod_builder
         .metadata_builder(|m| {
             m.with_recommended_labels(build_recommended_labels(
-                hello,
+                edc,
                 &resolved_product_image.app_version_label,
                 &rolegroup_ref.role,
                 &rolegroup_ref.role_group,
@@ -623,12 +625,12 @@ fn build_server_rolegroup_statefulset(
 
     Ok(StatefulSet {
         metadata: ObjectMetaBuilder::new()
-            .name_and_namespace(hello)
+            .name_and_namespace(edc)
             .name(&rolegroup_ref.object_name())
-            .ownerreference_from_resource(hello, None, Some(true))
+            .ownerreference_from_resource(edc, None, Some(true))
             .context(ObjectMissingMetadataForOwnerRefSnafu)?
             .with_recommended_labels(build_recommended_labels(
-                hello,
+                edc,
                 &resolved_product_image.app_version_label,
                 &rolegroup_ref.role,
                 &rolegroup_ref.role_group,
@@ -639,7 +641,7 @@ fn build_server_rolegroup_statefulset(
             replicas: rolegroup.and_then(|rg| rg.replicas).map(i32::from),
             selector: LabelSelector {
                 match_labels: Some(role_group_selector_labels(
-                    hello,
+                    edc,
                     APP_NAME,
                     &rolegroup_ref.role,
                     &rolegroup_ref.role_group,
@@ -664,12 +666,44 @@ pub fn error_policy(_obj: Arc<EDCCluster>, _error: &Error, _ctx: Arc<Ctx>) -> Ac
 }
 
 fn service_ports() -> Vec<ServicePort> {
-    vec![ServicePort {
-        name: Some(HTTP_PORT_NAME.to_string()),
-        port: HTTP_PORT.into(),
-        protocol: Some("TCP".to_string()),
-        ..ServicePort::default()
-    }]
+    vec![
+        ServicePort {
+            name: Some(HTTP_PORT_NAME.to_string()),
+            port: HTTP_PORT.into(),
+            protocol: Some("TCP".to_string()),
+            ..ServicePort::default()
+        },
+        ServicePort {
+            name: Some(CONTROL_PORT_NAME.to_string()),
+            port: CONTROL_PORT.into(),
+            protocol: Some("TCP".to_string()),
+            ..ServicePort::default()
+        },
+        ServicePort {
+            name: Some(MANAGEMENT_PORT_NAME.to_string()),
+            port: MANAGEMENT_PORT.into(),
+            protocol: Some("TCP".to_string()),
+            ..ServicePort::default()
+        },
+        ServicePort {
+            name: Some(IDS_PORT_NAME.to_string()),
+            port: IDS_PORT.into(),
+            protocol: Some("TCP".to_string()),
+            ..ServicePort::default()
+        },
+        ServicePort {
+            name: Some(PROTOCOL_PORT_NAME.to_string()),
+            port: PROTOCOL_PORT.into(),
+            protocol: Some("TCP".to_string()),
+            ..ServicePort::default()
+        },
+        ServicePort {
+            name: Some(PUBLIC_PORT_NAME.to_string()),
+            port: PUBLIC_PORT.into(),
+            protocol: Some("TCP".to_string()),
+            ..ServicePort::default()
+        },
+    ]
 }
 
 /// Creates recommended `ObjectLabels` to be used in deployed resources
@@ -684,7 +718,7 @@ pub fn build_recommended_labels<'a, T>(
         app_name: APP_NAME,
         app_version,
         operator_name: OPERATOR_NAME,
-        controller_name: HELLO_CONTROLLER_NAME,
+        controller_name: EDC_CONTROLLER_NAME,
         role,
         role_group,
     }

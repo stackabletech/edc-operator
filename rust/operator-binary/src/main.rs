@@ -3,7 +3,7 @@ mod controller;
 mod crd;
 mod product_logging;
 
-use crate::controller::HELLO_CONTROLLER_NAME;
+use crate::controller::EDC_CONTROLLER_NAME;
 
 use clap::{crate_description, crate_version, Parser};
 use crd::{EDCCluster, APP_NAME};
@@ -25,7 +25,7 @@ mod built_info {
     pub const TARGET_PLATFORM: Option<&str> = option_env!("TARGET");
 }
 
-const OPERATOR_NAME: &str = "hello.stackable.tech";
+const OPERATOR_NAME: &str = "edc.stackable.tech";
 
 #[derive(Parser)]
 #[clap(about, author)]
@@ -45,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
             tracing_target,
         }) => {
             stackable_operator::logging::initialize_logging(
-                "HELLO_OPERATOR_LOG",
+                "EDC_OPERATOR_LOG",
                 APP_NAME,
                 tracing_target,
             );
@@ -60,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
 
             let product_config = product_config.load(&[
                 "deploy/config-spec/properties.yaml",
-                "/etc/stackable/hello-operator/config-spec/properties.yaml",
+                "/etc/stackable/edc-operator/config-spec/properties.yaml",
             ])?;
 
             let client =
@@ -84,7 +84,7 @@ async fn main() -> anyhow::Result<()> {
             )
             .shutdown_on_signal()
             .run(
-                controller::reconcile_hello,
+                controller::reconcile_edc,
                 controller::error_policy,
                 Arc::new(controller::Ctx {
                     client: client.clone(),
@@ -94,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
             .map(|res| {
                 report_controller_reconciled(
                     &client,
-                    &format!("{HELLO_CONTROLLER_NAME}.{OPERATOR_NAME}"),
+                    &format!("{EDC_CONTROLLER_NAME}.{OPERATOR_NAME}"),
                     &res,
                 );
             })

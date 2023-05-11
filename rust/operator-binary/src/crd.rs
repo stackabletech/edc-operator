@@ -36,13 +36,8 @@ pub const STACKABLE_LOG_DIR_NAME: &str = "log";
 pub const STACKABLE_LOG_CONFIG_MOUNT_DIR: &str = "/stackable/mount/log-config";
 pub const STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME: &str = "log-config-mount";
 // config file names
-pub const INDEX_HTML: &str = "index.html";
-pub const HIVE_LOG4J2_PROPERTIES: &str = "hive-log4j2.properties";
-pub const NGINX_CONF: &str = "nginx.conf";
 pub const CONFIG_PROPERTIES: &str = "config.properties";
-// HTML file keys
-pub const HELLO_RECIPIENT: &str = "RECIPIENT";
-pub const HELLO_COLOR: &str = "COLOR";
+pub const HIVE_LOG4J2_PROPERTIES: &str = "hive-log4j2.properties";
 // config properties
 pub const EDC_HOSTNAME: &str = "edc.hostname";
 pub const EDC_IDS_ID: &str = "edc.ids.id";
