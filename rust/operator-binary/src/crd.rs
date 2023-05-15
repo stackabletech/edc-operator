@@ -31,6 +31,8 @@ pub const STACKABLE_CONFIG_DIR: &str = "/stackable/config";
 pub const STACKABLE_CONFIG_DIR_NAME: &str = "config";
 pub const STACKABLE_CONFIG_MOUNT_DIR: &str = "/stackable/mount/config";
 pub const STACKABLE_CONFIG_MOUNT_DIR_NAME: &str = "config-mount";
+pub const STACKABLE_CERT_MOUNT_DIR: &str = "/stackable/mount/cert";
+pub const STACKABLE_CERT_MOUNT_DIR_NAME: &str = "cert-mount";
 pub const STACKABLE_LOG_DIR: &str = "/stackable/log";
 pub const STACKABLE_LOG_DIR_NAME: &str = "log";
 pub const STACKABLE_LOG_CONFIG_MOUNT_DIR: &str = "/stackable/mount/log-config";
@@ -38,8 +40,13 @@ pub const STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME: &str = "log-config-mount";
 // config file names
 pub const CONFIG_PROPERTIES: &str = "config.properties";
 pub const HIVE_LOG4J2_PROPERTIES: &str = "hive-log4j2.properties";
+// secret keys
+pub const STACKABLE_CERT_MOUNT_KEYSTORE: &str = "cert.pfx";
+pub const STACKABLE_CERT_MOUNT_VAULT: &str = "vault.properties";
 // config properties
 pub const EDC_HOSTNAME: &str = "edc.hostname";
+pub const EDC_KEYSTORE: &str = "edc.keystore";
+pub const EDC_VAULT: &str = "edc.vault";
 pub const EDC_IDS_ID: &str = "edc.ids.id";
 pub const WEB_HTTP_PORT: &str = "web.http.port";
 pub const WEB_HTTP_PATH: &str = "web.http.path";
@@ -139,6 +146,8 @@ pub struct EDCClusterConfig {
     /// * external-stable: Use a LoadBalancer service
     #[serde(default)]
     pub listener_class: CurrentlySupportedListenerClasses,
+
+    pub cert_secret: String,
 }
 
 // TODO: Temporary solution until listener-operator is finished
@@ -385,6 +394,14 @@ impl Configuration for ConnectorConfigFragment {
             result.insert(
                 EDC_VAULT_HASHICORP_TIMEOUT_SECONDS.to_owned(),
                 Some("30".to_owned()),
+            );
+            result.insert(
+                EDC_KEYSTORE.to_owned(),
+                Some(format!("{}/{}", STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_KEYSTORE))
+            );
+            result.insert(
+                EDC_VAULT.to_owned(),
+                Some(format!("{}/{}", STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_VAULT))
             );
 
             // TODO IONOS access key and secret key are from the ENV

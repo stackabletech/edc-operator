@@ -6,11 +6,13 @@ use crate::crd::{
     ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, CONFIG_PROPERTIES,
     CONTROL_PORT, CONTROL_PORT_NAME, HTTP_PORT, HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME,
     MANAGEMENT_PORT, MANAGEMENT_PORT_NAME, PROTOCOL_PORT, PROTOCOL_PORT_NAME, PUBLIC_PORT,
-    PUBLIC_PORT_NAME, STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR,
+    PUBLIC_PORT_NAME, STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME,
+    STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR,
     STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR,
     STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
+use stackable_operator::k8s_openapi::api::core::v1::SecretVolumeSource;
 use stackable_operator::product_config::writer::to_java_properties_string;
 use stackable_operator::{
     builder::{ConfigMapBuilder, ContainerBuilder, ObjectMetaBuilder, PodBuilder},
@@ -473,7 +475,6 @@ fn build_server_rolegroup_statefulset(
     merged_config: &ConnectorConfig,
     sa_name: &str,
 ) -> Result<StatefulSet> {
-    // TODO this function still needs to be checked
     let rolegroup = edc
         .spec
         .connectors
@@ -509,6 +510,7 @@ fn build_server_rolegroup_statefulset(
         .image_from_product_image(resolved_product_image)
         .add_volume_mount(STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_DIR)
         .add_volume_mount(STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR)
+        .add_volume_mount(STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CERT_MOUNT_DIR)
         .add_volume_mount(STACKABLE_LOG_DIR_NAME, STACKABLE_LOG_DIR)
         .add_volume_mount(
             STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME,
@@ -576,6 +578,14 @@ fn build_server_rolegroup_statefulset(
                 size_limit: Some(Quantity(format!("{LOG_VOLUME_SIZE_IN_MIB}Mi"))),
             }),
             ..Volume::default()
+        })
+        .add_volume(Volume {
+            name: STACKABLE_CERT_MOUNT_DIR_NAME.to_string(),
+            secret: Some(SecretVolumeSource {
+                secret_name: Some(edc.spec.cluster_config.cert_secret.to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
         })
         .affinity(&merged_config.affinity)
         .service_account_name(sa_name);

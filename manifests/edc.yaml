@@ -5,10 +5,11 @@ metadata:
   name: edc-provider
 spec:
   image:
-    custom: edc-ionos-provider:v0
+    custom: edc-ionos:v0
     productVersion: 0.1.0
   clusterConfig:
     listenerClass: external-unstable
+    certSecret: consumer-cert
   connectors:
     roleGroups:
       default:
