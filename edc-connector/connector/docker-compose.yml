@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  connector:
+    image: edc-ionos-s3
+    ports:
+      - "8181:8181"
+      - "8182:8182"
+      - "8282:8282"
+    environment:
+      EDC_FS_CONFIG: /resources/config.properties
