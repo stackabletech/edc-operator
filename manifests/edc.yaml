@@ -2,14 +2,14 @@
 apiVersion: edc.stackable.tech/v1alpha1
 kind: EDCCluster
 metadata:
-  name: edc-provider
+  name: connector
 spec:
   image:
-    custom: edc-ionos:v0
-    productVersion: 0.1.0
+    custom: docker.stackable.tech/sandbox/edc:0.0.1-SNAPSHOT-stackable0.0.0-dev
+    productVersion: 0.0.1
   clusterConfig:
     listenerClass: external-unstable
-    certSecret: consumer-cert
+    certSecret: connector-cert
     s3:
       inline:
         bucketName: my-bucket
