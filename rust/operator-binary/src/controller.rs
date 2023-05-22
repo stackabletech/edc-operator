@@ -534,8 +534,8 @@ fn build_server_rolegroup_statefulset(
             ..Probe::default()
         })
         .liveness_probe(Probe {
-            initial_delay_seconds: Some(30),
-            period_seconds: Some(10),
+            initial_delay_seconds: Some(60),
+            period_seconds: Some(20),
             tcp_socket: Some(TCPSocketAction {
                 port: IntOrString::String(HTTP_PORT_NAME.to_string()),
                 ..TCPSocketAction::default()
