@@ -6,12 +6,16 @@ use crate::crd::{
     ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, CONFIG_PROPERTIES,
     CONTROL_PORT, CONTROL_PORT_NAME, HTTP_PORT, HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME,
     MANAGEMENT_PORT, MANAGEMENT_PORT_NAME, PROTOCOL_PORT, PROTOCOL_PORT_NAME, PUBLIC_PORT,
-    PUBLIC_PORT_NAME, STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME,
+    PUBLIC_PORT_NAME, STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CERTS_DIR,
     STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR,
     STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR,
-    STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME,
+    STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME, S3_SECRET_DIR_NAME, EDC_IONOS_ENDPOINT,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
+use stackable_operator::builder::{VolumeBuilder, SecretOperatorVolumeSourceBuilder};
+use stackable_operator::client::GetApi;
+use stackable_operator::commons::s3::{S3ConnectionSpec, S3AccessStyle};
+use stackable_operator::commons::tls::{TlsVerification, CaCert};
 use stackable_operator::k8s_openapi::api::core::v1::SecretVolumeSource;
 use stackable_operator::product_config::writer::to_java_properties_string;
 use stackable_operator::{
@@ -176,6 +180,10 @@ pub enum Error {
     BuildRbacResources {
         source: stackable_operator::error::Error,
     },
+    #[snafu(display(
+        "Druid does not support skipping the verification of the tls enabled S3 server"
+    ))]
+    S3TlsNoVerificationNotSupported,
 }
 type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -190,6 +198,14 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
     let client = &ctx.client;
     let resolved_product_image: ResolvedProductImage =
         hello.spec.image.resolve(DOCKER_IMAGE_BASE_NAME);
+
+    let s3_bucket_spec = hello
+        .spec
+        .cluster_config
+        .s3
+        .resolve(&ctx.client, hello.get_namespace())
+        .await
+        .context(ResolveS3ConnectionSnafu)?;
 
     let validated_config = validate_all_roles_and_groups_config(
         &resolved_product_image.product_version,
@@ -273,6 +289,7 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
             &rolegroup,
             rolegroup_config,
             &config,
+            s3_bucket_spec.connection.as_ref(),
             vector_aggregator_address.as_deref(),
         )?;
         let rg_statefulset = build_server_rolegroup_statefulset(
@@ -281,6 +298,7 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
             &rolegroup,
             rolegroup_config,
             &config,
+            s3_bucket_spec.connection.as_ref(),
             &rbac_sa.name_any(),
         )?;
 
@@ -370,18 +388,29 @@ fn build_connector_rolegroup_config_map(
     rolegroup: &RoleGroupRef<EDCCluster>,
     role_group_config: &HashMap<PropertyNameKind, BTreeMap<String, String>>,
     merged_config: &ConnectorConfig,
+    s3_conn: Option<&S3ConnectionSpec>,
     vector_aggregator_address: Option<&str>,
 ) -> Result<ConfigMap> {
     let mut config_properties = String::new();
 
     for (property_name_kind, config) in role_group_config {
+        let mut conf: BTreeMap<String, Option<String>> = Default::default();
         match property_name_kind {
             PropertyNameKind::File(file_name) if file_name == CONFIG_PROPERTIES => {
+
+                if let Some(conn) = s3_conn {
+                    if let Some(endpoint) = conn.endpoint() {
+                        conf.insert(EDC_IONOS_ENDPOINT.to_string(), Some(endpoint));
+                    }
+                }
+
                 let transformed_config: BTreeMap<String, Option<String>> = config
                     .iter()
                     .map(|(k, v)| (k.clone(), Some(v.clone())))
                     .collect();
-                config_properties = to_java_properties_string(transformed_config.iter())
+                conf.extend(transformed_config);
+
+                config_properties = to_java_properties_string(conf.iter())
                     .context(PropertiesWriteSnafu)?;
             }
             _ => {}
@@ -473,6 +502,7 @@ fn build_server_rolegroup_statefulset(
     rolegroup_ref: &RoleGroupRef<EDCCluster>,
     metastore_config: &HashMap<PropertyNameKind, BTreeMap<String, String>>,
     merged_config: &ConnectorConfig,
+    s3_conn: Option<&S3ConnectionSpec>,
     sa_name: &str,
 ) -> Result<StatefulSet> {
     let rolegroup = edc
@@ -504,6 +534,9 @@ fn build_server_rolegroup_statefulset(
     }
 
     let mut pod_builder = PodBuilder::new();
+
+    // S3
+    add_s3_volume_and_volume_mounts(s3_conn, &mut container_builder, &mut pod_builder)?;
 
     // TODO if a custom container command is needed, add it here (.command)
     let container_hello = container_builder
@@ -670,6 +703,47 @@ fn build_server_rolegroup_statefulset(
         status: None,
     })
 }
+
+fn add_s3_volume_and_volume_mounts(
+    s3_conn: Option<&S3ConnectionSpec>,
+    cb_druid: &mut ContainerBuilder,
+    pb: &mut PodBuilder,
+) -> Result<()> {
+    if let Some(s3_conn) = s3_conn {
+        if let Some(credentials) = &s3_conn.credentials {
+            pb.add_volume(credentials.to_volume("s3-credentials"));
+            cb_druid.add_volume_mount("s3-credentials", S3_SECRET_DIR_NAME);
+        }
+
+        if let Some(tls) = &s3_conn.tls {
+            match &tls.verification {
+                TlsVerification::None {} => return S3TlsNoVerificationNotSupportedSnafu.fail(),
+                TlsVerification::Server(server_verification) => {
+                    match &server_verification.ca_cert {
+                        CaCert::WebPki {} => {}
+                        CaCert::SecretClass(secret_class) => {
+                            let volume_name = format!("{secret_class}-tls-certificate");
+
+                            let volume = VolumeBuilder::new(&volume_name)
+                                .ephemeral(
+                                    SecretOperatorVolumeSourceBuilder::new(secret_class).build(),
+                                )
+                                .build();
+                            pb.add_volume(volume);
+                            cb_druid.add_volume_mount(
+                                &volume_name,
+                                format!("{STACKABLE_CERTS_DIR}/{volume_name}"),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 
 pub fn error_policy(_obj: Arc<EDCCluster>, _error: &Error, _ctx: Arc<Ctx>) -> Action {
     Action::requeue(Duration::from_secs(5))

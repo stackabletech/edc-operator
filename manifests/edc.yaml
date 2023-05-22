@@ -10,6 +10,15 @@ spec:
   clusterConfig:
     listenerClass: external-unstable
     certSecret: consumer-cert
+    s3:
+      inline:
+        bucketName: my-bucket
+        connection:
+          inline:
+            host: ionos.com # TODO
+            port: 443       # TODO
+            credentials:
+              secretClass: s3-credentials-class
   connectors:
     roleGroups:
       default:
