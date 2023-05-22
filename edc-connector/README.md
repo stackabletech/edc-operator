@@ -11,8 +11,9 @@ to the implemented use cases.**
 
 [up until the 19th of May 2023.](https://github.com/eclipse-edc/Connector/commit/edb35971c00b9c1007018c5325b0cc5fc5b2b1ba#diff-b335630551682c19a781afebcf4d07bf978fb1f8ac04c6bf87428ed5106870f5)
 
-This is intended as a stable source for the jar, as neither the EDC Project nor IONOS provide versioned jars. The jar should also work well together with our Dockerfile. In the future there should be official jars available (most likely) and then this custom build will not be necessary anymore.
+It still seems to be policy that there will be no official jars [source](https://github.com/eclipse-edc/Connector/discussions/3053).
 
+This is intended as a stable source for the jar, as neither the EDC Project nor IONOS provide versioned jars. The jar should also work well together with our Dockerfile. It is unclear who could provide an "official" jar.
 
 ## Build
 
