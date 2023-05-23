@@ -4,9 +4,10 @@ use crate::OPERATOR_NAME;
 
 use crate::crd::{
     ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, CONFIG_PROPERTIES,
-    CONTROL_PORT, CONTROL_PORT_NAME, EDC_IONOS_ENDPOINT, HTTP_PORT, HTTP_PORT_NAME, IDS_PORT,
-    IDS_PORT_NAME, MANAGEMENT_PORT, MANAGEMENT_PORT_NAME, PROTOCOL_PORT, PROTOCOL_PORT_NAME,
-    PUBLIC_PORT, PUBLIC_PORT_NAME, S3_SECRET_DIR_NAME, STACKABLE_CERTS_DIR,
+    CONTROL_PORT, CONTROL_PORT_NAME, EDC_IONOS_ACCESS_KEY, EDC_IONOS_ENDPOINT,
+    EDC_IONOS_SECRET_KEY, HTTP_PORT, HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME, MANAGEMENT_PORT,
+    MANAGEMENT_PORT_NAME, PROTOCOL_PORT, PROTOCOL_PORT_NAME, PUBLIC_PORT, PUBLIC_PORT_NAME,
+    SECRET_KEY_S3_ACCESS_KEY, SECRET_KEY_S3_SECRET_KEY, STACKABLE_CERTS_DIR,
     STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CONFIG_DIR,
     STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR, STACKABLE_CONFIG_MOUNT_DIR_NAME,
     STACKABLE_LOG_CONFIG_MOUNT_DIR, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR,
@@ -15,7 +16,7 @@ use crate::crd::{
 use snafu::{OptionExt, ResultExt, Snafu};
 use stackable_operator::builder::{SecretOperatorVolumeSourceBuilder, VolumeBuilder};
 use stackable_operator::client::GetApi;
-use stackable_operator::commons::s3::{S3AccessStyle, S3ConnectionSpec};
+use stackable_operator::commons::s3::S3ConnectionSpec;
 use stackable_operator::commons::tls::{CaCert, TlsVerification};
 use stackable_operator::k8s_openapi::api::core::v1::SecretVolumeSource;
 use stackable_operator::product_config::writer::to_java_properties_string;
@@ -549,10 +550,10 @@ fn build_server_rolegroup_statefulset(
     // Add S3 secret and access keys from the files mounted by the secret Operator
     if let Some(c) = s3_conn {
         if c.credentials.is_some() {
-            let path = format!("{}/{}", STACKABLE_SECRETS_DIR, "accessKey");
-            args.push(format!("-D{}=$(cat {})", "edc.ionos.access.key", path));
-            let path = format!("{}/{}", STACKABLE_SECRETS_DIR, "secretKey");
-            args.push(format!("-D{}=$(cat {})", "edc.ionos.secret.key", path));
+            let path = format!("{}/{}", STACKABLE_SECRETS_DIR, SECRET_KEY_S3_ACCESS_KEY);
+            args.push(format!("-D{}=$(cat {})", EDC_IONOS_ACCESS_KEY, path));
+            let path = format!("{}/{}", STACKABLE_SECRETS_DIR, SECRET_KEY_S3_SECRET_KEY);
+            args.push(format!("-D{}=$(cat {})", EDC_IONOS_SECRET_KEY, path));
         }
     }
 
@@ -734,7 +735,7 @@ fn add_s3_volume_and_volume_mounts(
     if let Some(s3_conn) = s3_conn {
         if let Some(credentials) = &s3_conn.credentials {
             pb.add_volume(credentials.to_volume("s3-credentials"));
-            cb_druid.add_volume_mount("s3-credentials", S3_SECRET_DIR_NAME);
+            cb_druid.add_volume_mount("s3-credentials", STACKABLE_SECRETS_DIR);
         }
 
         if let Some(tls) = &s3_conn.tls {

@@ -80,11 +80,8 @@ pub const EDC_IONOS_ACCESS_KEY: &str = "edc.ionos.access.key";
 pub const EDC_IONOS_SECRET_KEY: &str = "edc.ionos.secret.key";
 pub const EDC_IONOS_ENDPOINT: &str = "edc.ionos.endpoints";
 // S3
-pub const S3_SECRET_DIR_NAME: &str = "/stackable/secrets";
-const ENV_S3_ACCESS_KEY: &str = "AWS_ACCESS_KEY_ID";
-const ENV_S3_SECRET_KEY: &str = "AWS_SECRET_ACCESS_KEY";
-const SECRET_KEY_S3_ACCESS_KEY: &str = "accessKey";
-const SECRET_KEY_S3_SECRET_KEY: &str = "secretKey";
+pub const SECRET_KEY_S3_ACCESS_KEY: &str = "accessKey";
+pub const SECRET_KEY_S3_SECRET_KEY: &str = "secretKey";
 // default ports
 pub const HTTP_PORT_NAME: &str = "http";
 pub const HTTP_PORT: u16 = 19191;
