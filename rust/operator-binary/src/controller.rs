@@ -4,18 +4,19 @@ use crate::OPERATOR_NAME;
 
 use crate::crd::{
     ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, CONFIG_PROPERTIES,
-    CONTROL_PORT, CONTROL_PORT_NAME, HTTP_PORT, HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME,
-    MANAGEMENT_PORT, MANAGEMENT_PORT_NAME, PROTOCOL_PORT, PROTOCOL_PORT_NAME, PUBLIC_PORT,
-    PUBLIC_PORT_NAME, STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CERTS_DIR,
-    STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR,
-    STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR,
-    STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME, S3_SECRET_DIR_NAME, EDC_IONOS_ENDPOINT,
+    CONTROL_PORT, CONTROL_PORT_NAME, EDC_IONOS_ENDPOINT, HTTP_PORT, HTTP_PORT_NAME, IDS_PORT,
+    IDS_PORT_NAME, MANAGEMENT_PORT, MANAGEMENT_PORT_NAME, PROTOCOL_PORT, PROTOCOL_PORT_NAME,
+    PUBLIC_PORT, PUBLIC_PORT_NAME, S3_SECRET_DIR_NAME, STACKABLE_CERTS_DIR,
+    STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CONFIG_DIR,
+    STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR, STACKABLE_CONFIG_MOUNT_DIR_NAME,
+    STACKABLE_LOG_CONFIG_MOUNT_DIR, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR,
+    STACKABLE_LOG_DIR_NAME, STACKABLE_SECRETS_DIR,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
-use stackable_operator::builder::{VolumeBuilder, SecretOperatorVolumeSourceBuilder};
+use stackable_operator::builder::{SecretOperatorVolumeSourceBuilder, VolumeBuilder};
 use stackable_operator::client::GetApi;
-use stackable_operator::commons::s3::{S3ConnectionSpec, S3AccessStyle};
-use stackable_operator::commons::tls::{TlsVerification, CaCert};
+use stackable_operator::commons::s3::{S3AccessStyle, S3ConnectionSpec};
+use stackable_operator::commons::tls::{CaCert, TlsVerification};
 use stackable_operator::k8s_openapi::api::core::v1::SecretVolumeSource;
 use stackable_operator::product_config::writer::to_java_properties_string;
 use stackable_operator::{
@@ -397,7 +398,6 @@ fn build_connector_rolegroup_config_map(
         let mut conf: BTreeMap<String, Option<String>> = Default::default();
         match property_name_kind {
             PropertyNameKind::File(file_name) if file_name == CONFIG_PROPERTIES => {
-
                 if let Some(conn) = s3_conn {
                     if let Some(endpoint) = conn.endpoint() {
                         conf.insert(EDC_IONOS_ENDPOINT.to_string(), Some(endpoint));
@@ -410,8 +410,8 @@ fn build_connector_rolegroup_config_map(
                     .collect();
                 conf.extend(transformed_config);
 
-                config_properties = to_java_properties_string(conf.iter())
-                    .context(PropertiesWriteSnafu)?;
+                config_properties =
+                    to_java_properties_string(conf.iter()).context(PropertiesWriteSnafu)?;
             }
             _ => {}
         }
@@ -538,8 +538,30 @@ fn build_server_rolegroup_statefulset(
     // S3
     add_s3_volume_and_volume_mounts(s3_conn, &mut container_builder, &mut pod_builder)?;
 
+    let mut args = vec![
+        "java".to_string(),
+        "-Dedc.fs.config=./mount/config/config.properties".to_string(),
+        "-Dedc.keystore=./mount/cert/cert.pfx".to_string(),
+        "-Dedc.keystore.password=123456".to_string(),
+        "-Dedc.vault=./mount/cert/vault.properties".to_string(),
+    ];
+
+    // Add S3 secret and access keys from the files mounted by the secret Operator
+    if let Some(c) = s3_conn {
+        if c.credentials.is_some() {
+            let path = format!("{}/{}", STACKABLE_SECRETS_DIR, "accessKey");
+            args.push(format!("-D{}=$(cat {})", "edc.ionos.access.key", path));
+            let path = format!("{}/{}", STACKABLE_SECRETS_DIR, "secretKey");
+            args.push(format!("-D{}=$(cat {})", "edc.ionos.secret.key", path));
+        }
+    }
+
+    // We add this at the and, as the .jar file should be the last argument to the call to the java binary
+    args.extend(vec!["-jar".to_string(), "connector.jar".to_string()]);
+
     // TODO if a custom container command is needed, add it here (.command)
     let container_hello = container_builder
+        .args(args)
         .image_from_product_image(resolved_product_image)
         .add_volume_mount(STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_DIR)
         .add_volume_mount(STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR)
@@ -743,7 +765,6 @@ fn add_s3_volume_and_volume_mounts(
 
     Ok(())
 }
-
 
 pub fn error_policy(_obj: Arc<EDCCluster>, _error: &Error, _ctx: Arc<Ctx>) -> Action {
     Action::requeue(Duration::from_secs(5))

@@ -28,6 +28,7 @@ use strum::{Display, EnumIter};
 
 pub const APP_NAME: &str = "edc";
 // directories
+pub const STACKABLE_SECRETS_DIR: &str = "/stackable/secrets";
 pub const STACKABLE_CONFIG_DIR: &str = "/stackable/config";
 pub const STACKABLE_CONFIG_DIR_NAME: &str = "config";
 pub const STACKABLE_CONFIG_MOUNT_DIR: &str = "/stackable/mount/config";
@@ -419,10 +420,6 @@ impl Configuration for ConnectorConfigFragment {
                     STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_VAULT
                 )),
             );
-
-            // TODO IONOS access key and secret key are from the ENV
-            result.insert(EDC_IONOS_ACCESS_KEY.to_owned(), Some("TODO".to_owned()));
-            result.insert(EDC_IONOS_SECRET_KEY.to_owned(), Some("TODO".to_owned()));
             result.insert(
                 EDC_IONOS_ENDPOINT.to_owned(),
                 Some("s3-eu-central-1.ionoscloud.com".to_owned()),

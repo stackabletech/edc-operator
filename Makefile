@@ -1,3 +1,6 @@
+kind-load:
+	kind load docker-image docker.stackable.tech/sandbox/edc:0.0.1-SNAPSHOT-stackable0.0.0-dev
+
 dependencies:
 	stackablectl op in commons secret
 
