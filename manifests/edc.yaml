@@ -10,6 +10,7 @@ spec:
   clusterConfig:
     listenerClass: external-unstable
     certSecret: connector-cert
+    vectorAggregatorConfigMapName: vector-aggregator-discovery
   connectors:
     roleGroups:
       default:

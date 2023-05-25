@@ -39,7 +39,6 @@ pub const STACKABLE_LOG_CONFIG_MOUNT_DIR: &str = "/stackable/mount/log-config";
 pub const STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME: &str = "log-config-mount";
 // config file names
 pub const CONFIG_PROPERTIES: &str = "config.properties";
-pub const HIVE_LOG4J2_PROPERTIES: &str = "hive-log4j2.properties";
 // secret keys
 pub const STACKABLE_CERT_MOUNT_KEYSTORE: &str = "cert.pfx";
 pub const STACKABLE_CERT_MOUNT_VAULT: &str = "vault.properties";
@@ -89,6 +88,9 @@ pub const PROTOCOL_PORT_NAME: &str = "protocol";
 pub const PROTOCOL_PORT: u16 = 19195;
 pub const PUBLIC_PORT_NAME: &str = "public";
 pub const PUBLIC_PORT: u16 = 19291;
+// logging
+pub const LOGBACK_XML: &str = "logback.xml";
+pub const EDC_CONNECTOR_LOG_FILE: &str = "edc-connector.log4j.xml";
 
 #[derive(Snafu, Debug)]
 pub enum Error {

@@ -1,6 +1,6 @@
-use crate::controller::MAX_HIVE_LOG_FILES_SIZE_IN_MIB;
+use crate::controller::MAX_LOG_FILES_SIZE_IN_MIB;
 
-use crate::crd::{Container, EDCCluster, HIVE_LOG4J2_PROPERTIES, STACKABLE_LOG_DIR};
+use crate::crd::{Container, EDCCluster, EDC_CONNECTOR_LOG_FILE, LOGBACK_XML, STACKABLE_LOG_DIR};
 use snafu::{OptionExt, ResultExt, Snafu};
 use stackable_operator::{
     builder::ConfigMapBuilder,
@@ -38,22 +38,20 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 
 const VECTOR_AGGREGATOR_CM_ENTRY: &str = "ADDRESS";
 const CONSOLE_CONVERSION_PATTERN: &str = "%d{ISO8601} %5p [%t] %c{2}: %m%n";
-const HIVE_LOG_FILE: &str = "hive.log4j2.xml";
 
 /// Return the address of the Vector aggregator if the corresponding ConfigMap name is given in the
 /// cluster spec
 pub async fn resolve_vector_aggregator_address(
-    hbase: &EDCCluster,
+    edc: &EDCCluster,
     client: &Client,
 ) -> Result<Option<String>> {
     let vector_aggregator_address = if let Some(vector_aggregator_config_map_name) =
-        &hbase.spec.cluster_config.vector_aggregator_config_map_name
+        &edc.spec.cluster_config.vector_aggregator_config_map_name
     {
         let vector_aggregator_address = client
             .get::<ConfigMap>(
                 vector_aggregator_config_map_name,
-                hbase
-                    .namespace()
+                edc.namespace()
                     .as_deref()
                     .context(ObjectHasNoNamespaceSnafu)?,
             )
@@ -87,16 +85,14 @@ pub fn extend_role_group_config_map(
     }) = logging.containers.get(&Container::Connector)
     {
         cm_builder.add_data(
-            HIVE_LOG4J2_PROPERTIES,
-            product_logging::framework::create_log4j2_config(
-                &format!(
-                    "{STACKABLE_LOG_DIR}/{container}",
-                    container = Container::Connector
-                ),
-                HIVE_LOG_FILE,
-                MAX_HIVE_LOG_FILES_SIZE_IN_MIB,
+            LOGBACK_XML,
+            product_logging::framework::create_logback_config(
+                &format!("{STACKABLE_LOG_DIR}/hello"),
+                EDC_CONNECTOR_LOG_FILE,
+                MAX_LOG_FILES_SIZE_IN_MIB,
                 CONSOLE_CONVERSION_PATTERN,
                 log_config,
+                None,
             ),
         );
     }
