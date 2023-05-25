@@ -397,11 +397,17 @@ impl Configuration for ConnectorConfigFragment {
             );
             result.insert(
                 EDC_KEYSTORE.to_owned(),
-                Some(format!("{}/{}", STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_KEYSTORE))
+                Some(format!(
+                    "{}/{}",
+                    STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_KEYSTORE
+                )),
             );
             result.insert(
                 EDC_VAULT.to_owned(),
-                Some(format!("{}/{}", STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_VAULT))
+                Some(format!(
+                    "{}/{}",
+                    STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_VAULT
+                )),
             );
 
             // TODO IONOS access key and secret key are from the ENV
