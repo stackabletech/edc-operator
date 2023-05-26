@@ -1,10 +1,6 @@
-use std::cmp;
-
 use crate::controller::MAX_LOG_FILES_SIZE_IN_MIB;
 
-use crate::crd::{
-    Container, EDCCluster, EDC_CONNECTOR_JAVA_LOG_FILE, JAVA_LOGGING, STACKABLE_LOG_DIR,
-};
+use crate::crd::{Container, EDCCluster, EDC_CONNECTOR_JAVA_LOG_FILE, STACKABLE_LOG_DIR};
 use snafu::{OptionExt, ResultExt, Snafu};
 use stackable_operator::product_logging::spec::AutomaticContainerLogConfig;
 use stackable_operator::{
@@ -90,9 +86,9 @@ pub fn extend_role_group_config_map(
     }) = logging.containers.get(&Container::Connector)
     {
         cm_builder.add_data(
-            JAVA_LOGGING,
+            EDC_CONNECTOR_JAVA_LOG_FILE,
             create_java_logging_config(
-                &format!("{STACKABLE_LOG_DIR}/hello"),
+                &format!("{STACKABLE_LOG_DIR}/edc"),
                 EDC_CONNECTOR_JAVA_LOG_FILE,
                 MAX_LOG_FILES_SIZE_IN_MIB,
                 CONSOLE_CONVERSION_PATTERN,
@@ -125,57 +121,24 @@ pub fn extend_role_group_config_map(
 }
 
 fn create_java_logging_config(
-    log_dir: &str,
-    log_file: &str,
-    max_size_in_mib: u32,
-    console_conversion_pattern: &str,
-    config: &AutomaticContainerLogConfig,
+    _log_dir: &str,
+    _log_file: &str,
+    _max_size_in_mib: u32,
+    _console_conversion_pattern: &str,
+    _config: &AutomaticContainerLogConfig,
 ) -> String {
-    let number_of_archived_log_files = 1;
-
-    let loggers = config
-        .loggers
-        .iter()
-        .filter(|(name, _)| name.as_str() != AutomaticContainerLogConfig::ROOT_LOGGER)
-        .map(|(name, logger_config)| {
-            format!(
-                "log4j.logger.{name}={level}\n",
-                name = name.escape_default(),
-                level = logger_config.level.to_log4j_literal(),
-            )
-        })
-        .collect::<String>();
-
     format!(
-        r#"log4j.rootLogger={root_log_level}, CONSOLE, FILE
+        r#"handlers=java.util.logging.FileHandler, java.util.logging.ConsoleHandler
+.level={root_log_level}
+java.util.logging.FileHandler.pattern=edc-operator62%g.log
+java.util.logging.FileHandler.limit=50000
+java.util.logging.FileHandler.count=10
+java.util.logging.FileHandler.formatter=java.util.logging.SimpleFormatter
+java.util.logging.ConsoleHandler.level={console_log_level}
+java.util.logging.ConsoleHandler.formatter = java.util.logging.SimpleFormatter
 
-log4j.appender.CONSOLE=org.apache.log4j.ConsoleAppender
-log4j.appender.CONSOLE.Threshold={console_log_level}
-log4j.appender.CONSOLE.layout=org.apache.log4j.PatternLayout
-log4j.appender.CONSOLE.layout.ConversionPattern={console_conversion_pattern}
-
-log4j.appender.FILE=org.apache.log4j.RollingFileAppender
-log4j.appender.FILE.Threshold={file_log_level}
-log4j.appender.FILE.File={log_dir}/{log_file}
-log4j.appender.FILE.MaxFileSize={max_log_file_size_in_mib}MB
-log4j.appender.FILE.MaxBackupIndex={number_of_archived_log_files}
-log4j.appender.FILE.layout=org.apache.log4j.xml.XMLLayout
-
-{loggers}"#,
-        max_log_file_size_in_mib =
-            cmp::max(1, max_size_in_mib / (1 + number_of_archived_log_files)),
-        root_log_level = config.root_log_level().to_log4j_literal(),
-        console_log_level = config
-            .console
-            .as_ref()
-            .and_then(|console| console.level)
-            .unwrap_or_default()
-            .to_log4j_literal(),
-        file_log_level = config
-            .file
-            .as_ref()
-            .and_then(|file| file.level)
-            .unwrap_or_default()
-            .to_log4j_literal(),
+"#,
+        root_log_level = "INFO",
+        console_log_level = "INFO"
     )
 }

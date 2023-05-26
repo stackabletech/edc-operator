@@ -57,8 +57,8 @@ use std::{
 use strum::EnumDiscriminants;
 use tracing::warn;
 
-pub const EDC_CONTROLLER_NAME: &str = "hellocluster";
-const DOCKER_IMAGE_BASE_NAME: &str = "hello";
+pub const EDC_CONTROLLER_NAME: &str = "edccluster";
+const DOCKER_IMAGE_BASE_NAME: &str = "edc";
 
 pub const MAX_LOG_FILES_SIZE_IN_MIB: u32 = 10;
 
@@ -185,16 +185,16 @@ impl ReconcilerError for Error {
     }
 }
 
-pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action> {
+pub async fn reconcile_edc(edc: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action> {
     tracing::info!("Starting reconcile");
     let client = &ctx.client;
     let resolved_product_image: ResolvedProductImage =
-        hello.spec.image.resolve(DOCKER_IMAGE_BASE_NAME);
+        edc.spec.image.resolve(DOCKER_IMAGE_BASE_NAME);
 
     let validated_config = validate_all_roles_and_groups_config(
         &resolved_product_image.product_version,
         &transform_all_roles_to_config(
-            hello.as_ref(),
+            edc.as_ref(),
             [(
                 EDCRole::Connector.to_string(),
                 (
@@ -203,7 +203,7 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
                         PropertyNameKind::Cli,
                         PropertyNameKind::File(CONFIG_PROPERTIES.to_string()),
                     ],
-                    hello.spec.connectors.clone().context(NoServerRoleSnafu)?,
+                    edc.spec.connectors.clone().context(NoServerRoleSnafu)?,
                 ),
             )]
             .into(),
@@ -224,13 +224,13 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
         APP_NAME,
         OPERATOR_NAME,
         EDC_CONTROLLER_NAME,
-        &hello.object_ref(&()),
-        ClusterResourceApplyStrategy::from(&hello.spec.cluster_operation),
+        &edc.object_ref(&()),
+        ClusterResourceApplyStrategy::from(&edc.spec.cluster_operation),
     )
     .context(CreateClusterResourcesSnafu)?;
 
     let (rbac_sa, rbac_rolebinding) = build_rbac_resources(
-        hello.as_ref(),
+        edc.as_ref(),
         APP_NAME,
         cluster_resources.get_required_labels(),
     )
@@ -245,7 +245,7 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
         .await
         .context(ApplyRoleBindingSnafu)?;
 
-    let server_role_service = build_server_role_service(&hello, &resolved_product_image)?;
+    let server_role_service = build_server_role_service(&edc, &resolved_product_image)?;
 
     // we have to get the assigned ports
     cluster_resources
@@ -253,22 +253,22 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
         .await
         .context(ApplyRoleServiceSnafu)?;
 
-    let vector_aggregator_address = resolve_vector_aggregator_address(&hello, client)
+    let vector_aggregator_address = resolve_vector_aggregator_address(&edc, client)
         .await
         .context(ResolveVectorAggregatorAddressSnafu)?;
 
     let mut ss_cond_builder = StatefulSetConditionBuilder::default();
 
     for (rolegroup_name, rolegroup_config) in server_config.iter() {
-        let rolegroup = hello.server_rolegroup_ref(rolegroup_name);
+        let rolegroup = edc.server_rolegroup_ref(rolegroup_name);
 
-        let config = hello
+        let config = edc
             .merged_config(&EDCRole::Connector, &rolegroup.role_group)
             .context(FailedToResolveResourceConfigSnafu)?;
 
-        let rg_service = build_rolegroup_service(&hello, &resolved_product_image, &rolegroup)?;
+        let rg_service = build_rolegroup_service(&edc, &resolved_product_image, &rolegroup)?;
         let rg_configmap = build_connector_rolegroup_config_map(
-            &hello,
+            &edc,
             &resolved_product_image,
             &rolegroup,
             rolegroup_config,
@@ -276,7 +276,7 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
             vector_aggregator_address.as_deref(),
         )?;
         let rg_statefulset = build_server_rolegroup_statefulset(
-            &hello,
+            &edc,
             &resolved_product_image,
             &rolegroup,
             rolegroup_config,
@@ -309,17 +309,17 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
     }
 
     let cluster_operation_cond_builder =
-        ClusterOperationsConditionBuilder::new(&hello.spec.cluster_operation);
+        ClusterOperationsConditionBuilder::new(&edc.spec.cluster_operation);
 
     let status = EDCClusterStatus {
         conditions: compute_conditions(
-            hello.as_ref(),
+            edc.as_ref(),
             &[&ss_cond_builder, &cluster_operation_cond_builder],
         ),
     };
 
     client
-        .apply_patch_status(OPERATOR_NAME, &*hello, &status)
+        .apply_patch_status(OPERATOR_NAME, &*edc, &status)
         .await
         .context(ApplyStatusSnafu)?;
 

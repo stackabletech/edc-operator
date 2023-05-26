@@ -89,7 +89,7 @@ pub const PROTOCOL_PORT: u16 = 19195;
 pub const PUBLIC_PORT_NAME: &str = "public";
 pub const PUBLIC_PORT: u16 = 19291;
 // logging
-pub const JAVA_LOGGING: &str = "java-logging.properties";
+pub const _JAVA_LOGGING: &str = "java-logging.properties";
 pub const EDC_CONNECTOR_JAVA_LOG_FILE: &str = "logging.properties";
 
 #[derive(Snafu, Debug)]
