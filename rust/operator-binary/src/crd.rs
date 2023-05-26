@@ -89,8 +89,8 @@ pub const PROTOCOL_PORT: u16 = 19195;
 pub const PUBLIC_PORT_NAME: &str = "public";
 pub const PUBLIC_PORT: u16 = 19291;
 // logging
-pub const LOGBACK_XML: &str = "logback.xml";
-pub const EDC_CONNECTOR_LOG_FILE: &str = "edc-connector.log4j.xml";
+pub const JAVA_LOGGING: &str = "java-logging.properties";
+pub const EDC_CONNECTOR_JAVA_LOG_FILE: &str = "logging.properties";
 
 #[derive(Snafu, Debug)]
 pub enum Error {

@@ -17,3 +17,4 @@ image.tar
 tilt_options.json
 
 **/bin
+/.vscode/settings.json

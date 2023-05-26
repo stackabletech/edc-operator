@@ -79,6 +79,8 @@ dependencies {
 	
 	implementation("de.fraunhofer.iais.eis.ids.infomodel:java:${fraunhoferVersion}")
 
+	//Logging
+	implementation("${edcGroup}:monitor-jdk-logger:${edcVersion}")
 }
 
 repositories {
