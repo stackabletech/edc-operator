@@ -7,8 +7,7 @@ use crate::crd::{
     CONTROL_PORT, CONTROL_PORT_NAME, HTTP_PORT, HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME,
     MANAGEMENT_PORT, MANAGEMENT_PORT_NAME, PROTOCOL_PORT, PROTOCOL_PORT_NAME, PUBLIC_PORT,
     PUBLIC_PORT_NAME, STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME,
-    STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR,
-    STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR,
+    STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR,
     STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
@@ -142,8 +141,8 @@ pub enum Error {
     },
     #[snafu(display("failed to resolve and merge resource config for role and role group"))]
     FailedToResolveResourceConfig { source: crate::crd::Error },
-    #[snafu(display("failed to create hello container [{name}]"))]
-    FailedToCreateHelloContainer {
+    #[snafu(display("failed to create EDC container [{name}]"))]
+    FailedToCreateEdcContainer {
         source: stackable_operator::error::Error,
         name: String,
     },
@@ -332,31 +331,31 @@ pub async fn reconcile_edc(edc: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action
 }
 
 pub fn build_server_role_service(
-    hello: &EDCCluster,
+    edc: &EDCCluster,
     resolved_product_image: &ResolvedProductImage,
 ) -> Result<Service> {
     let role_name = EDCRole::Connector.to_string();
 
-    let role_svc_name = hello
+    let role_svc_name = edc
         .server_role_service_name()
         .context(GlobalServiceNameNotFoundSnafu)?;
     Ok(Service {
         metadata: ObjectMetaBuilder::new()
-            .name_and_namespace(hello)
+            .name_and_namespace(edc)
             .name(role_svc_name)
-            .ownerreference_from_resource(hello, None, Some(true))
+            .ownerreference_from_resource(edc, None, Some(true))
             .context(ObjectMissingMetadataForOwnerRefSnafu)?
             .with_recommended_labels(build_recommended_labels(
-                hello,
+                edc,
                 &resolved_product_image.app_version_label,
                 &role_name,
                 "global",
             ))
             .build(),
         spec: Some(ServiceSpec {
-            type_: Some(hello.spec.cluster_config.listener_class.k8s_service_type()),
+            type_: Some(edc.spec.cluster_config.listener_class.k8s_service_type()),
             ports: Some(service_ports()),
-            selector: Some(role_selector_labels(hello, APP_NAME, &role_name)),
+            selector: Some(role_selector_labels(edc, APP_NAME, &role_name)),
             ..ServiceSpec::default()
         }),
         status: None,
@@ -428,18 +427,18 @@ fn build_connector_rolegroup_config_map(
 ///
 /// This is mostly useful for internal communication between peers, or for clients that perform client-side load balancing.
 fn build_rolegroup_service(
-    hello: &EDCCluster,
+    edc: &EDCCluster,
     resolved_product_image: &ResolvedProductImage,
     rolegroup: &RoleGroupRef<EDCCluster>,
 ) -> Result<Service> {
     Ok(Service {
         metadata: ObjectMetaBuilder::new()
-            .name_and_namespace(hello)
+            .name_and_namespace(edc)
             .name(&rolegroup.object_name())
-            .ownerreference_from_resource(hello, None, Some(true))
+            .ownerreference_from_resource(edc, None, Some(true))
             .context(ObjectMissingMetadataForOwnerRefSnafu)?
             .with_recommended_labels(build_recommended_labels(
-                hello,
+                edc,
                 &resolved_product_image.app_version_label,
                 &rolegroup.role,
                 &rolegroup.role_group,
@@ -451,7 +450,7 @@ fn build_rolegroup_service(
             cluster_ip: Some("None".to_string()),
             ports: Some(service_ports()),
             selector: Some(role_group_selector_labels(
-                hello,
+                edc,
                 APP_NAME,
                 &rolegroup.role,
                 &rolegroup.role_group,
@@ -483,7 +482,7 @@ fn build_server_rolegroup_statefulset(
         .role_groups
         .get(&rolegroup_ref.role_group);
     let mut container_builder =
-        ContainerBuilder::new(APP_NAME).context(FailedToCreateHelloContainerSnafu {
+        ContainerBuilder::new(APP_NAME).context(FailedToCreateEdcContainerSnafu {
             name: APP_NAME.to_string(),
         })?;
 
@@ -503,10 +502,10 @@ fn build_server_rolegroup_statefulset(
     let mut pod_builder = PodBuilder::new();
 
     // TODO if a custom container command is needed, add it here (.command)
-    let container_hello = container_builder
+    let container_edc = container_builder
         .image_from_product_image(resolved_product_image)
         .add_volume_mount(STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_DIR)
-        .add_volume_mount(STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR)
+        //.add_volume_mount(STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR)
         .add_volume_mount(STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CERT_MOUNT_DIR)
         .add_volume_mount(STACKABLE_LOG_DIR_NAME, STACKABLE_LOG_DIR)
         .add_volume_mount(
@@ -551,17 +550,17 @@ fn build_server_rolegroup_statefulset(
             ))
         })
         .image_pull_secrets_from_product_image(resolved_product_image)
-        .add_container(container_hello)
-        .add_volume(Volume {
+        .add_container(container_edc)
+        /*.add_volume(Volume {
             name: STACKABLE_CONFIG_DIR_NAME.to_string(),
             empty_dir: Some(EmptyDirVolumeSource {
                 medium: None,
                 size_limit: Some(Quantity("10Mi".to_string())),
             }),
             ..Volume::default()
-        })
+        })*/
         .add_volume(stackable_operator::k8s_openapi::api::core::v1::Volume {
-            name: STACKABLE_CONFIG_MOUNT_DIR_NAME.to_string(),
+            name: STACKABLE_CONFIG_DIR_NAME.to_string(),
             config_map: Some(ConfigMapVolumeSource {
                 name: Some(rolegroup_ref.object_name()),
                 ..Default::default()

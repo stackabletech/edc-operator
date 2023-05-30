@@ -5,6 +5,10 @@ apply-example:
 	kubectl apply -f manifests/edc.yaml &
 	kubectl apply -f manifests/vector-aggregator-discovery.yaml
 
+delete-example:
+	kubectl delete -f manifests/edc.yaml &
+	kubectl delete -f manifests/vector-aggregator-discovery.yaml
+
 secrets:
 	kubectl create secret generic connector-cert \
 	--from-file=resources/cert.pfx \

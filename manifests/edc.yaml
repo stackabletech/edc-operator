@@ -5,13 +5,16 @@ metadata:
   name: connector
 spec:
   image:
-    custom: docker.stackable.tech/sandbox/edc:0.0.1-SNAPSHOT-stackable0.0.0-dev
+    custom: docker.stackable.tech/stackable/edc:0.0.1-SNAPSHOT-stackable0.0.0-dev
     productVersion: 0.0.1
   clusterConfig:
     listenerClass: external-unstable
     certSecret: connector-cert
     vectorAggregatorConfigMapName: vector-aggregator-discovery
   connectors:
+    config:
+      logging:
+        enableVectorAgent: true
     roleGroups:
       default:
         replicas: 1

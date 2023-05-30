@@ -29,8 +29,8 @@ pub const APP_NAME: &str = "edc";
 // directories
 pub const STACKABLE_CONFIG_DIR: &str = "/stackable/config";
 pub const STACKABLE_CONFIG_DIR_NAME: &str = "config";
-pub const STACKABLE_CONFIG_MOUNT_DIR: &str = "/stackable/mount/config";
-pub const STACKABLE_CONFIG_MOUNT_DIR_NAME: &str = "config-mount";
+//pub const STACKABLE_CONFIG_MOUNT_DIR: &str = "/stackable/mount/config";
+//pub const STACKABLE_CONFIG_MOUNT_DIR_NAME: &str = "config-mount";
 pub const STACKABLE_CERT_MOUNT_DIR: &str = "/stackable/mount/cert";
 pub const STACKABLE_CERT_MOUNT_DIR_NAME: &str = "cert-mount";
 pub const STACKABLE_LOG_DIR: &str = "/stackable/log";
