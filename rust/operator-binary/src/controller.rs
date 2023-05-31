@@ -508,7 +508,8 @@ fn build_server_rolegroup_statefulset(
             log_config,
         ));
     }
-    args.extend(vec!["java -Dedc.keystore=./cert/cert.pfx \
+    args.extend(vec!["java -Djava.util.logging.config.file=./config/logging.properties \
+    -Dedc.keystore=./cert/cert.pfx \
     -Dedc.keystore.password=123456 \
     -Dedc.vault=./cert/vault.properties \
     -Dedc.fs.config=./config/config.properties \

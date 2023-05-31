@@ -130,7 +130,7 @@ fn create_java_logging_config(
     format!(
         r#"handlers=java.util.logging.FileHandler, java.util.logging.ConsoleHandler
 .level={root_log_level}
-java.util.logging.FileHandler.pattern=/stackable/log/edc/edc-stdout.log
+java.util.logging.FileHandler.pattern=/stackable/log/edc/edc.%g.logger
 java.util.logging.FileHandler.limit=50000
 java.util.logging.FileHandler.count=10
 java.util.logging.FileHandler.formatter=java.util.logging.SimpleFormatter
