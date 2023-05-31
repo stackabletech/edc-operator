@@ -508,22 +508,13 @@ fn build_server_rolegroup_statefulset(
             log_config,
         ));
     }
-    //args.extend(vec!["echo 1 && sleep 2 && echo 2 && sleep 2 && echo 3".to_string()]);
-    args.extend(vec!["java -Dedc.keystore=./cert/cert.pfx -Dedc.keystore.password=123456 -Dedc.vault=./cert/vault.properties -Dedc.fs.config=./config/config.properties -jar connector.jar".to_string()]);
+    args.extend(vec!["java -Dedc.keystore=./cert/cert.pfx \
+    -Dedc.keystore.password=123456 \
+    -Dedc.vault=./cert/vault.properties \
+    -Dedc.fs.config=./config/config.properties \
+    -jar connector.jar"
+        .to_string()]);
 
-    let mut init_container_builder =
-        ContainerBuilder::new("prepare").context(FailedToCreateEdcContainerSnafu {
-            name: "prepare".to_string(),
-        })?;
-
-    let _container_init = init_container_builder
-        .image_from_product_image(resolved_product_image)
-        .add_volume_mount(STACKABLE_LOG_DIR_NAME, STACKABLE_LOG_DIR)
-        .command(vec!["bash".to_string(), "-c".to_string()])
-        .args(vec![args.join(" && ")])
-        .build();
-
-    // TODO if a custom container command is needed, add it here (.command)
     let container_edc = container_builder
         .image_from_product_image(resolved_product_image)
         .add_volume_mount(STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_DIR)
@@ -537,7 +528,6 @@ fn build_server_rolegroup_statefulset(
         .add_container_port(PUBLIC_PORT_NAME, PUBLIC_PORT.into())
         .resources(merged_config.resources.clone().into())
         .command(vec!["/bin/bash".to_string(), "-c".to_string()])
-        //.args(vec!["java -Dedc.keystore=./cert/cert.pfx -Dedc.keystore.password=123456 -Dedc.vault=./cert/vault.properties -Dedc.fs.config=./config/config.properties -jar connector.jar".to_string()])
         .args(vec![args.join(" && ")])
         .readiness_probe(Probe {
             initial_delay_seconds: Some(10),
@@ -571,7 +561,6 @@ fn build_server_rolegroup_statefulset(
         })
         .image_pull_secrets_from_product_image(resolved_product_image)
         .add_container(container_edc)
-        //.add_init_container(container_init)
         .add_volume(stackable_operator::k8s_openapi::api::core::v1::Volume {
             name: STACKABLE_CONFIG_DIR_NAME.to_string(),
             config_map: Some(ConfigMapVolumeSource {

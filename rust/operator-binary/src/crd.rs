@@ -29,14 +29,10 @@ pub const APP_NAME: &str = "edc";
 // directories
 pub const STACKABLE_CONFIG_DIR: &str = "/stackable/config";
 pub const STACKABLE_CONFIG_DIR_NAME: &str = "config";
-//pub const STACKABLE_CONFIG_MOUNT_DIR: &str = "/stackable/mount/config";
-//pub const STACKABLE_CONFIG_MOUNT_DIR_NAME: &str = "config-mount";
 pub const STACKABLE_CERT_DIR: &str = "/stackable/cert";
 pub const STACKABLE_CERT_DIR_NAME: &str = "cert";
 pub const STACKABLE_LOG_DIR: &str = "/stackable/log";
 pub const STACKABLE_LOG_DIR_NAME: &str = "log";
-//pub const STACKABLE_LOG_CONFIG_MOUNT_DIR: &str = "/stackable/mount/log-config";
-//pub const STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME: &str = "log-config-mount";
 // config file names
 pub const CONFIG_PROPERTIES: &str = "config.properties";
 // secret keys
@@ -200,7 +196,6 @@ pub enum EDCRole {
 pub enum Container {
     Edc,
     Vector,
-    Prepare,
 }
 
 #[derive(Clone, Debug, Default, JsonSchema, PartialEq, Fragment)]
