@@ -31,17 +31,17 @@ pub const STACKABLE_CONFIG_DIR: &str = "/stackable/config";
 pub const STACKABLE_CONFIG_DIR_NAME: &str = "config";
 //pub const STACKABLE_CONFIG_MOUNT_DIR: &str = "/stackable/mount/config";
 //pub const STACKABLE_CONFIG_MOUNT_DIR_NAME: &str = "config-mount";
-pub const STACKABLE_CERT_MOUNT_DIR: &str = "/stackable/mount/cert";
-pub const STACKABLE_CERT_MOUNT_DIR_NAME: &str = "cert-mount";
+pub const STACKABLE_CERT_DIR: &str = "/stackable/cert";
+pub const STACKABLE_CERT_DIR_NAME: &str = "cert";
 pub const STACKABLE_LOG_DIR: &str = "/stackable/log";
 pub const STACKABLE_LOG_DIR_NAME: &str = "log";
-pub const STACKABLE_LOG_CONFIG_MOUNT_DIR: &str = "/stackable/mount/log-config";
-pub const STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME: &str = "log-config-mount";
+//pub const STACKABLE_LOG_CONFIG_MOUNT_DIR: &str = "/stackable/mount/log-config";
+//pub const STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME: &str = "log-config-mount";
 // config file names
 pub const CONFIG_PROPERTIES: &str = "config.properties";
 // secret keys
-pub const STACKABLE_CERT_MOUNT_KEYSTORE: &str = "cert.pfx";
-pub const STACKABLE_CERT_MOUNT_VAULT: &str = "vault.properties";
+pub const STACKABLE_CERT_KEYSTORE: &str = "cert.pfx";
+pub const STACKABLE_CERT_VAULT: &str = "vault.properties";
 // config properties
 pub const EDC_HOSTNAME: &str = "edc.hostname";
 pub const EDC_KEYSTORE: &str = "edc.keystore";
@@ -198,8 +198,9 @@ pub enum EDCRole {
 #[serde(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]
 pub enum Container {
-    Connector,
+    Edc,
     Vector,
+    Prepare,
 }
 
 #[derive(Clone, Debug, Default, JsonSchema, PartialEq, Fragment)]
@@ -401,15 +402,12 @@ impl Configuration for ConnectorConfigFragment {
                 EDC_KEYSTORE.to_owned(),
                 Some(format!(
                     "{}/{}",
-                    STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_KEYSTORE
+                    STACKABLE_CERT_DIR, STACKABLE_CERT_KEYSTORE
                 )),
             );
             result.insert(
                 EDC_VAULT.to_owned(),
-                Some(format!(
-                    "{}/{}",
-                    STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_VAULT
-                )),
+                Some(format!("{}/{}", STACKABLE_CERT_DIR, STACKABLE_CERT_VAULT)),
             );
 
             // TODO IONOS access key and secret key are from the ENV

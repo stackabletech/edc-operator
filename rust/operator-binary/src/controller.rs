@@ -6,9 +6,8 @@ use crate::crd::{
     ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, CONFIG_PROPERTIES,
     CONTROL_PORT, CONTROL_PORT_NAME, HTTP_PORT, HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME,
     MANAGEMENT_PORT, MANAGEMENT_PORT_NAME, PROTOCOL_PORT, PROTOCOL_PORT_NAME, PUBLIC_PORT,
-    PUBLIC_PORT_NAME, STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME,
-    STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR,
-    STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME,
+    PUBLIC_PORT_NAME, STACKABLE_CERT_DIR, STACKABLE_CERT_DIR_NAME, STACKABLE_CONFIG_DIR,
+    STACKABLE_CONFIG_DIR_NAME, STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
 use stackable_operator::k8s_openapi::api::core::v1::SecretVolumeSource;
@@ -36,10 +35,7 @@ use stackable_operator::{
     product_config_utils::{transform_all_roles_to_config, validate_all_roles_and_groups_config},
     product_logging::{
         self,
-        spec::{
-            ConfigMapLogConfig, ContainerLogConfig, ContainerLogConfigChoice,
-            CustomContainerLogConfig,
-        },
+        spec::{ContainerLogConfig, ContainerLogConfigChoice},
     },
     role_utils::RoleGroupRef,
     status::condition::{
@@ -500,18 +496,39 @@ fn build_server_rolegroup_statefulset(
     }
 
     let mut pod_builder = PodBuilder::new();
+    let mut args = Vec::new();
+
+    if let Some(ContainerLogConfig {
+        choice: Some(ContainerLogConfigChoice::Automatic(log_config)),
+    }) = merged_config.logging.containers.get(&Container::Edc)
+    {
+        args.push(product_logging::framework::capture_shell_output(
+            STACKABLE_LOG_DIR,
+            "edc",
+            log_config,
+        ));
+    }
+    //args.extend(vec!["echo 1 && sleep 2 && echo 2 && sleep 2 && echo 3".to_string()]);
+    args.extend(vec!["java -Dedc.keystore=./cert/cert.pfx -Dedc.keystore.password=123456 -Dedc.vault=./cert/vault.properties -Dedc.fs.config=./config/config.properties -jar connector.jar".to_string()]);
+
+    let mut init_container_builder =
+        ContainerBuilder::new("prepare").context(FailedToCreateEdcContainerSnafu {
+            name: "prepare".to_string(),
+        })?;
+
+    let _container_init = init_container_builder
+        .image_from_product_image(resolved_product_image)
+        .add_volume_mount(STACKABLE_LOG_DIR_NAME, STACKABLE_LOG_DIR)
+        .command(vec!["bash".to_string(), "-c".to_string()])
+        .args(vec![args.join(" && ")])
+        .build();
 
     // TODO if a custom container command is needed, add it here (.command)
     let container_edc = container_builder
         .image_from_product_image(resolved_product_image)
         .add_volume_mount(STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_DIR)
-        //.add_volume_mount(STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR)
-        .add_volume_mount(STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CERT_MOUNT_DIR)
+        .add_volume_mount(STACKABLE_CERT_DIR_NAME, STACKABLE_CERT_DIR)
         .add_volume_mount(STACKABLE_LOG_DIR_NAME, STACKABLE_LOG_DIR)
-        .add_volume_mount(
-            STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME,
-            STACKABLE_LOG_CONFIG_MOUNT_DIR,
-        )
         .add_container_port(HTTP_PORT_NAME, HTTP_PORT.into())
         .add_container_port(CONTROL_PORT_NAME, CONTROL_PORT.into())
         .add_container_port(MANAGEMENT_PORT_NAME, MANAGEMENT_PORT.into())
@@ -519,6 +536,9 @@ fn build_server_rolegroup_statefulset(
         .add_container_port(PROTOCOL_PORT_NAME, PROTOCOL_PORT.into())
         .add_container_port(PUBLIC_PORT_NAME, PUBLIC_PORT.into())
         .resources(merged_config.resources.clone().into())
+        .command(vec!["/bin/bash".to_string(), "-c".to_string()])
+        //.args(vec!["java -Dedc.keystore=./cert/cert.pfx -Dedc.keystore.password=123456 -Dedc.vault=./cert/vault.properties -Dedc.fs.config=./config/config.properties -jar connector.jar".to_string()])
+        .args(vec![args.join(" && ")])
         .readiness_probe(Probe {
             initial_delay_seconds: Some(10),
             period_seconds: Some(10),
@@ -551,14 +571,7 @@ fn build_server_rolegroup_statefulset(
         })
         .image_pull_secrets_from_product_image(resolved_product_image)
         .add_container(container_edc)
-        /*.add_volume(Volume {
-            name: STACKABLE_CONFIG_DIR_NAME.to_string(),
-            empty_dir: Some(EmptyDirVolumeSource {
-                medium: None,
-                size_limit: Some(Quantity("10Mi".to_string())),
-            }),
-            ..Volume::default()
-        })*/
+        //.add_init_container(container_init)
         .add_volume(stackable_operator::k8s_openapi::api::core::v1::Volume {
             name: STACKABLE_CONFIG_DIR_NAME.to_string(),
             config_map: Some(ConfigMapVolumeSource {
@@ -576,7 +589,7 @@ fn build_server_rolegroup_statefulset(
             ..Volume::default()
         })
         .add_volume(Volume {
-            name: STACKABLE_CERT_MOUNT_DIR_NAME.to_string(),
+            name: STACKABLE_CERT_DIR_NAME.to_string(),
             secret: Some(SecretVolumeSource {
                 secret_name: Some(edc.spec.cluster_config.cert_secret.to_string()),
                 ..Default::default()
@@ -585,40 +598,6 @@ fn build_server_rolegroup_statefulset(
         })
         .affinity(&merged_config.affinity)
         .service_account_name(sa_name);
-
-    // .security_context(
-    //     PodSecurityContextBuilder::new()
-    //         .run_as_user(HELLO_UID)
-    //         .run_as_group(0)
-    //         .fs_group(1000)
-    //         .build(),
-    // )
-
-    if let Some(ContainerLogConfig {
-        choice:
-            Some(ContainerLogConfigChoice::Custom(CustomContainerLogConfig {
-                custom: ConfigMapLogConfig { config_map },
-            })),
-    }) = merged_config.logging.containers.get(&Container::Connector)
-    {
-        pod_builder.add_volume(Volume {
-            name: STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME.to_string(),
-            config_map: Some(ConfigMapVolumeSource {
-                name: Some(config_map.into()),
-                ..ConfigMapVolumeSource::default()
-            }),
-            ..Volume::default()
-        });
-    } else {
-        pod_builder.add_volume(Volume {
-            name: STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME.to_string(),
-            config_map: Some(ConfigMapVolumeSource {
-                name: Some(rolegroup_ref.object_name()),
-                ..ConfigMapVolumeSource::default()
-            }),
-            ..Volume::default()
-        });
-    }
 
     if merged_config.logging.enable_vector_agent {
         pod_builder.add_container(product_logging::framework::vector_container(

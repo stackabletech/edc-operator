@@ -83,7 +83,7 @@ pub fn extend_role_group_config_map(
 ) -> Result<()> {
     if let Some(ContainerLogConfig {
         choice: Some(ContainerLogConfigChoice::Automatic(log_config)),
-    }) = logging.containers.get(&Container::Connector)
+    }) = logging.containers.get(&Container::Edc)
     {
         cm_builder.add_data(
             EDC_CONNECTOR_JAVA_LOG_FILE,
@@ -130,7 +130,7 @@ fn create_java_logging_config(
     format!(
         r#"handlers=java.util.logging.FileHandler, java.util.logging.ConsoleHandler
 .level={root_log_level}
-java.util.logging.FileHandler.pattern=edc-operator62%g.log
+java.util.logging.FileHandler.pattern=/stackable/log/edc/edc-stdout.log
 java.util.logging.FileHandler.limit=50000
 java.util.logging.FileHandler.count=10
 java.util.logging.FileHandler.formatter=java.util.logging.SimpleFormatter
