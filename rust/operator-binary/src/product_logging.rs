@@ -180,6 +180,10 @@ include = ["{STACKABLE_LOG_DIR}/*/*.stdout.log"]
 type = "file"
 include = ["{STACKABLE_LOG_DIR}/*/*.stderr.log"]
 
+[sources.files_jul]
+type = "file"
+include = ["{STACKABLE_LOG_DIR}/*/*.logger"]
+
 [transforms.processed_files_stdout]
 inputs = ["files_stdout"]
 type = "remap"
@@ -196,8 +200,24 @@ source = '''
 .level = "ERROR"
 '''
 
+[transforms.processed_files_jul]
+inputs = ["files_jul"]
+type = "remap"
+source = '''
+.logger = "ROOT"
+.level = "INFO"
+'''
+
 [transforms.parsed_logs_std]
 inputs = ["processed_files_std*"]
+type = "remap"
+source = '''
+. |= parse_regex!(.file, r'^{STACKABLE_LOG_DIR}/(?P<container>.*?)/(?P<file>.*?)$')
+del(.source_type)
+'''
+
+[transforms.parsed_logs_jul]
+inputs = ["processed_files_jul"]
 type = "remap"
 source = '''
 . |= parse_regex!(.file, r'^{STACKABLE_LOG_DIR}/(?P<container>.*?)/(?P<file>.*?)$')
@@ -215,6 +235,13 @@ if err == null {{
   .level = parsed_event.level
   .message = parsed_event.message
 }}
+'''
+
+[transforms.extended_logs_jul]
+inputs = ["parsed_logs_jul"]
+type = "remap"
+source = '''
+.message = "Java Logging: " + string!(.message)
 '''
 
 [transforms.filtered_logs_vector]
