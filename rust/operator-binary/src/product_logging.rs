@@ -208,10 +208,10 @@ del(.source_type)
 inputs = ["parsed_logs_std"]
 type = "remap"
 source = '''
-parsed_event, err = parse_regex(strip_whitespace(strip_ansi_escape_codes(string!(.message))), r'(?P<level>\w+)+[ ]+(?P<timestamp>[0-9]{{4}}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T(2[0-3]|[01][0-9]):[0-5][0-9]:[0-5][0-9].[0-9]{{9}})+[ ]+(?P<message>.*)')
+parsed_event, err = parse_regex(strip_whitespace(strip_ansi_escape_codes(string!(.message))), r'(?P<level>\w+)+[ ]+(?P<timestamp>[0-9]{{4}}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T(2[0-3]|[01][0-9]):[0-5][0-9]:[0-5][0-9].[0-9]+)+[ ]+(?P<message>.*)')
 
 if err == null {{
-  .timestamp = parse_timestamp!(parsed_event.timestamp, "%Y-%m-%dT%H:%M:%S.%9f")
+  .timestamp = parse_timestamp!(parsed_event.timestamp, "%Y-%m-%dT%H:%M:%S.%f")
   .level = parsed_event.level
   .message = parsed_event.message
 }}
