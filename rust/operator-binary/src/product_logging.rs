@@ -2,7 +2,7 @@ use crate::controller::MAX_LOG_FILES_SIZE_IN_MIB;
 
 use crate::crd::{Container, EDCCluster, EDC_CONNECTOR_JAVA_LOG_FILE, STACKABLE_LOG_DIR};
 use snafu::{OptionExt, ResultExt, Snafu};
-use stackable_operator::product_logging::spec::AutomaticContainerLogConfig;
+use stackable_operator::product_logging::spec::{AutomaticContainerLogConfig, LogLevel};
 use stackable_operator::{
     builder::ConfigMapBuilder,
     client::Client,
@@ -109,7 +109,7 @@ pub fn extend_role_group_config_map(
     if logging.enable_vector_agent {
         cm_builder.add_data(
             product_logging::framework::VECTOR_CONFIG_FILE,
-            product_logging::framework::create_vector_config(
+            create_vector_config(
                 rolegroup,
                 vector_aggregator_address.context(MissingVectorAggregatorAddressSnafu)?,
                 vector_log_config,
@@ -140,5 +140,119 @@ java.util.logging.ConsoleHandler.formatter = java.util.logging.SimpleFormatter
 "#,
         root_log_level = "INFO",
         console_log_level = "INFO"
+    )
+}
+
+fn create_vector_config(
+    role_group: &RoleGroupRef<EDCCluster>,
+    vector_aggregator_address: &str,
+    config: Option<&AutomaticContainerLogConfig>,
+) -> String {
+    let vector_log_level = config
+        .and_then(|config| config.file.as_ref())
+        .and_then(|file| file.level)
+        .unwrap_or_default();
+
+    let vector_log_level_filter_expression = match vector_log_level {
+        LogLevel::TRACE => "true",
+        LogLevel::DEBUG => r#".level != "TRACE""#,
+        LogLevel::INFO => r#"!includes(["TRACE", "DEBUG"], .metadata.level)"#,
+        LogLevel::WARN => r#"!includes(["TRACE", "DEBUG", "INFO"], .metadata.level)"#,
+        LogLevel::ERROR => r#"!includes(["TRACE", "DEBUG", "INFO", "WARN"], .metadata.level)"#,
+        LogLevel::FATAL => "false",
+        LogLevel::NONE => "false",
+    };
+
+    format!(
+        r#"data_dir = "/stackable/vector/var"
+
+[log_schema]
+host_key = "pod"
+
+[sources.vector]
+type = "internal_logs"
+
+[sources.files_stdout]
+type = "file"
+include = ["{STACKABLE_LOG_DIR}/*/*.stdout.log"]
+
+[sources.files_stderr]
+type = "file"
+include = ["{STACKABLE_LOG_DIR}/*/*.stderr.log"]
+
+[transforms.processed_files_stdout]
+inputs = ["files_stdout"]
+type = "remap"
+source = '''
+.logger = "ROOT"
+.level = "INFO"
+'''
+
+[transforms.processed_files_stderr]
+inputs = ["files_stderr"]
+type = "remap"
+source = '''
+.logger = "ROOT"
+.level = "ERROR"
+'''
+
+[transforms.parsed_logs_std]
+inputs = ["processed_files_std*"]
+type = "remap"
+source = '''
+. |= parse_regex!(.file, r'^{STACKABLE_LOG_DIR}/(?P<container>.*?)/(?P<file>.*?)$')
+del(.source_type)
+'''
+
+[transforms.extended_logs_files]
+inputs = ["parsed_logs_std"]
+type = "remap"
+source = '''
+parsed_event, err = parse_regex(strip_whitespace(strip_ansi_escape_codes(string!(.message))), r'(?P<level>\w+)+[ ]+(?P<timestamp>[0-9]{{4}}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T(2[0-3]|[01][0-9]):[0-5][0-9]:[0-5][0-9].[0-9]{{9}})+[ ]+(?P<message>.*)')
+
+if err == null {{
+  .timestamp = parse_timestamp!(parsed_event.timestamp, "%Y-%m-%dT%H:%M:%S.%9f")
+  .level = parsed_event.level
+  .message = parsed_event.message
+}}
+'''
+
+[transforms.filtered_logs_vector]
+inputs = ["vector"]
+type = "filter"
+condition = '{vector_log_level_filter_expression}'
+
+[transforms.extended_logs_vector]
+inputs = ["filtered_logs_vector"]
+type = "remap"
+source = '''
+.container = "vector"
+.level = .metadata.level
+.logger = .metadata.module_path
+if exists(.file) {{ .processed_file = del(.file) }}
+del(.metadata)
+del(.pid)
+del(.source_type)
+'''
+
+[transforms.extended_logs]
+inputs = ["extended_logs_*"]
+type = "remap"
+source = '''
+.namespace = "{namespace}"
+.cluster = "{cluster_name}"
+.role = "{role_name}"
+.roleGroup = "{role_group_name}"
+'''
+
+[sinks.aggregator]
+inputs = ["extended_logs"]
+type = "vector"
+address = "{vector_aggregator_address}"
+"#,
+        namespace = role_group.cluster.namespace.clone().unwrap_or_default(),
+        cluster_name = role_group.cluster.name,
+        role_name = role_group.role,
+        role_group_name = role_group.role_group
     )
 }
