@@ -25,12 +25,9 @@ run:
 start: dependencies apply run
 
 pf:
-	kubectl port-forward svc/connector 19191 &
-	kubectl port-forward svc/connector 19192 &
-	kubectl port-forward svc/connector 19193 &
-	kubectl port-forward svc/connector 19194 &
-	kubectl port-forward svc/connector 19195 &
-	kubectl port-forward svc/connector 19291 &
+	kubectl port-forward svc/connector 8181 &
+	kubectl port-forward svc/connector 8182 &
+	kubectl port-forward svc/connector 8282 &
 
 kill-pf:
 	ps aux | grep '[k]ubectl port-forward' | awk -F ' ' '{print $$2}' | xargs kill

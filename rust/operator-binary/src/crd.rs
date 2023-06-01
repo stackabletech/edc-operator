@@ -47,10 +47,15 @@ pub const HIVE_LOG4J2_PROPERTIES: &str = "hive-log4j2.properties";
 pub const STACKABLE_CERT_MOUNT_KEYSTORE: &str = "cert.pfx";
 pub const STACKABLE_CERT_MOUNT_VAULT: &str = "vault.properties";
 // config properties
+pub const EDC_API_AUTH_KEY: &str = "edc.api.auth.key";
+pub const EDC_DATAPLANE_TOKEN_VALIDATION_ENDPOINT: &str = "edc.dataplane.token.validation.endpoint";
 pub const EDC_HOSTNAME: &str = "edc.hostname";
-pub const EDC_KEYSTORE: &str = "edc.keystore";
-pub const EDC_VAULT: &str = "edc.vault";
 pub const EDC_IDS_ID: &str = "edc.ids.id";
+pub const EDC_IONOS_ACCESS_KEY: &str = "edc.ionos.access.key";
+pub const EDC_IONOS_SECRET_KEY: &str = "edc.ionos.secret.key";
+pub const EDC_IONOS_ENDPOINT: &str = "edc.ionos.endpoint";
+pub const EDC_IONOS_TOKEN: &str = "edc.ionos.token";
+pub const EDC_KEYSTORE: &str = "edc.keystore";
 pub const WEB_HTTP_PORT: &str = "web.http.port";
 pub const WEB_HTTP_PATH: &str = "web.http.path";
 pub const WEB_HTTP_CONTROL_PORT: &str = "web.http.control.port";
@@ -63,38 +68,38 @@ pub const WEB_HTTP_PROTOCOL_PORT: &str = "web.http.protocol.port";
 pub const WEB_HTTP_PROTOCOL_PATH: &str = "web.http.protocol.path";
 pub const WEB_HTTP_PUBLIC_PORT: &str = "web.http.public.port";
 pub const WEB_HTTP_PUBLIC_PATH: &str = "web.http.public.path";
-pub const EDC_DATAPLANE_TOKEN_VALIDATION_ENDPOINT: &str = "edc.dataplane.token.validation.endpoint";
-pub const IDS_WEBHOOK_ADRESS: &str = "ids.webhook.address";
-pub const EDC_RECEIVER_HTTP_ENDPOINT: &str = "edc.receiver.http.endpoint";
 pub const EDC_PUBLIC_KEY_ALIAS: &str = "edc.public.key.alias";
+pub const EDC_RECEIVER_HTTP_ENDPOINT: &str = "edc.receiver.http.endpoint";
 pub const EDC_TRANSFER_DATAPLANE_TOKEN_SIGNER_PRIVATEKEY_ALIAS: &str =
     "edc.transfer.dataplane.token.signer.privatekey.alias";
 pub const EDC_TRANSFER_PROXY_TOKEN_SIGNER_PRIVATEKEY_ALIAS: &str =
     "edc.transfer.proxy.token.signer.privatekey.alias";
 pub const EDC_TRANSFER_PROXY_TOKEN_VERIFIER_PUBLICKEY_ALIAS: &str =
     "edc.transfer.proxy.token.verifier.publickey.alias";
+pub const EDC_VAULT: &str = "edc.vault";
+pub const EDC_VAULT_CERTIFICATE: &str = "edc.vault.certificate";
+pub const EDC_VAULT_CLIENTID: &str = "edc.vault.clientid";
+pub const EDC_VAULT_NAME: &str = "edc.vault.name";
+pub const EDC_VAULT_TENANTID: &str = "edc.vault.tenantid";
 pub const EDC_VAULT_HASHICORP_URL: &str = "edc.vault.hashicorp.url";
 pub const EDC_VAULT_HASHICORP_TOKEN: &str = "edc.vault.hashicorp.token";
-pub const EDC_VAULT_HASHICORP_TIMEOUT_SECONDS: &str = "edc.vault.hashicorp.timeout.seconds";
-pub const EDC_IONOS_ACCESS_KEY: &str = "edc.ionos.access.key";
-pub const EDC_IONOS_SECRET_KEY: &str = "edc.ionos.secret.key";
-pub const EDC_IONOS_ENDPOINT: &str = "edc.ionos.endpoints";
+pub const IDS_WEBHOOK_ADRESS: &str = "ids.webhook.address";
 // S3
 pub const SECRET_KEY_S3_ACCESS_KEY: &str = "accessKey";
 pub const SECRET_KEY_S3_SECRET_KEY: &str = "secretKey";
 // default ports
 pub const HTTP_PORT_NAME: &str = "http";
-pub const HTTP_PORT: u16 = 19191;
-pub const CONTROL_PORT_NAME: &str = "control";
-pub const CONTROL_PORT: u16 = 19192;
+pub const HTTP_PORT: u16 = 8181;
+//pub const CONTROL_PORT_NAME: &str = "control";
+//pub const CONTROL_PORT: u16 = 19192;
 pub const MANAGEMENT_PORT_NAME: &str = "management";
-pub const MANAGEMENT_PORT: u16 = 19193;
+pub const MANAGEMENT_PORT: u16 = 8182;
 pub const IDS_PORT_NAME: &str = "ids";
-pub const IDS_PORT: u16 = 19194;
-pub const PROTOCOL_PORT_NAME: &str = "protocol";
-pub const PROTOCOL_PORT: u16 = 19195;
-pub const PUBLIC_PORT_NAME: &str = "public";
-pub const PUBLIC_PORT: u16 = 19291;
+pub const IDS_PORT: u16 = 8282;
+//pub const PROTOCOL_PORT_NAME: &str = "protocol";
+//pub const PROTOCOL_PORT: u16 = 19195;
+//pub const PUBLIC_PORT_NAME: &str = "public";
+//pub const PUBLIC_PORT: u16 = 19291;
 
 #[derive(Snafu, Debug)]
 pub enum Error {
@@ -326,17 +331,20 @@ impl Configuration for ConnectorConfigFragment {
         if file == CONFIG_PROPERTIES {
             result.insert(EDC_HOSTNAME.to_owned(), Some(name.to_owned()));
             result.insert(EDC_IDS_ID.to_owned(), Some(format!("urn:connector:{name}")));
+            // This is the password you need to pass in to the API via a header
+            // It should probably be set in a secret
+            result.insert(EDC_API_AUTH_KEY.to_owned(), Some("password".to_owned()));
             // Ports
             result.insert(WEB_HTTP_PORT.to_owned(), Some(HTTP_PORT.to_string()));
             result.insert(WEB_HTTP_PATH.to_owned(), Some("/api".to_owned()));
-            result.insert(
-                WEB_HTTP_CONTROL_PORT.to_owned(),
-                Some(CONTROL_PORT.to_string()),
-            );
-            result.insert(
-                WEB_HTTP_CONTROL_PATH.to_owned(),
-                Some("/control".to_owned()),
-            );
+            // result.insert(
+            //     WEB_HTTP_CONTROL_PORT.to_owned(),
+            //     Some(CONTROL_PORT.to_string()),
+            // );
+            // result.insert(
+            //     WEB_HTTP_CONTROL_PATH.to_owned(),
+            //     Some("/control".to_owned()),
+            // );
             result.insert(
                 WEB_HTTP_MANAGEMENT_PORT.to_owned(),
                 Some(MANAGEMENT_PORT.to_string()),
@@ -347,61 +355,73 @@ impl Configuration for ConnectorConfigFragment {
             );
             result.insert(WEB_HTTP_IDS_PORT.to_owned(), Some(IDS_PORT.to_string()));
             result.insert(WEB_HTTP_IDS_PATH.to_owned(), Some("/api/v1/ids".to_owned()));
-            result.insert(
-                WEB_HTTP_PROTOCOL_PORT.to_owned(),
-                Some(PROTOCOL_PORT.to_string()),
-            );
-            result.insert(
-                WEB_HTTP_PROTOCOL_PATH.to_owned(),
-                Some("/dataplane".to_owned()),
-            );
-            result.insert(
-                WEB_HTTP_PUBLIC_PORT.to_owned(),
-                Some(PUBLIC_PORT.to_string()),
-            );
-            result.insert(WEB_HTTP_PUBLIC_PATH.to_owned(), Some("/public".to_owned()));
+            // result.insert(
+            //     WEB_HTTP_PROTOCOL_PORT.to_owned(),
+            //     Some(PROTOCOL_PORT.to_string()),
+            // );
+            // result.insert(
+            //     WEB_HTTP_PROTOCOL_PATH.to_owned(),
+            //     Some("/dataplane".to_owned()),
+            // );
+            // result.insert(
+            //     WEB_HTTP_PUBLIC_PORT.to_owned(),
+            //     Some(PUBLIC_PORT.to_string()),
+            // );
+            // result.insert(WEB_HTTP_PUBLIC_PATH.to_owned(), Some("/public".to_owned()));
 
-            result.insert(
-                EDC_DATAPLANE_TOKEN_VALIDATION_ENDPOINT.to_owned(),
-                Some(format!("http://{}:{}/control/token", name, CONTROL_PORT)),
-            );
+            // result.insert(
+            //     EDC_DATAPLANE_TOKEN_VALIDATION_ENDPOINT.to_owned(),
+            //     Some(format!("http://{}:{}/control/token", name, CONTROL_PORT)),
+            // );
             result.insert(
                 IDS_WEBHOOK_ADRESS.to_owned(),
                 Some(format!("http://{}:{}", name, IDS_PORT)),
             );
 
-            result.insert(
-                EDC_RECEIVER_HTTP_ENDPOINT.to_owned(),
-                Some("http://backend:4000/receiver/urn:connector:provider/callback".to_owned()),
-            ); // TODO backend URL shouldn't be hardcoded here. Possibly part of the CRD?
-            result.insert(
-                EDC_PUBLIC_KEY_ALIAS.to_owned(),
-                Some("public-key".to_owned()),
-            );
-            result.insert(
-                EDC_TRANSFER_DATAPLANE_TOKEN_SIGNER_PRIVATEKEY_ALIAS.to_owned(),
-                Some("1".to_owned()),
-            );
-            result.insert(
-                EDC_TRANSFER_PROXY_TOKEN_SIGNER_PRIVATEKEY_ALIAS.to_owned(),
-                Some("1".to_owned()),
-            );
-            result.insert(
-                EDC_TRANSFER_PROXY_TOKEN_VERIFIER_PUBLICKEY_ALIAS.to_owned(),
-                Some("public-key".to_owned()),
-            );
+            // result.insert(
+            //     EDC_RECEIVER_HTTP_ENDPOINT.to_owned(),
+            //     Some("http://backend:4000/receiver/urn:connector:provider/callback".to_owned()),
+            // ); // TODO backend URL shouldn't be hardcoded here. Possibly part of the CRD?
+            // result.insert(
+            //     EDC_PUBLIC_KEY_ALIAS.to_owned(),
+            //     Some("public-key".to_owned()),
+            // );
+            // result.insert(
+            //     EDC_TRANSFER_DATAPLANE_TOKEN_SIGNER_PRIVATEKEY_ALIAS.to_owned(),
+            //     Some("1".to_owned()),
+            // );
+            // result.insert(
+            //     EDC_TRANSFER_PROXY_TOKEN_SIGNER_PRIVATEKEY_ALIAS.to_owned(),
+            //     Some("1".to_owned()),
+            // );
+            // result.insert(
+            //     EDC_TRANSFER_PROXY_TOKEN_VERIFIER_PUBLICKEY_ALIAS.to_owned(),
+            //     Some("public-key".to_owned()),
+            // );
 
             result.insert(
-                EDC_VAULT_HASHICORP_URL.to_owned(),
-                Some("http://hashicorp-vault:8200".to_owned()),
-            ); // TODO probably also a CRD arg
-            result.insert(
-                EDC_VAULT_HASHICORP_TOKEN.to_owned(),
-                Some("test-token".to_owned()),
+                EDC_VAULT_CLIENTID.to_owned(),
+                Some("company1".to_owned()),
             );
             result.insert(
-                EDC_VAULT_HASHICORP_TIMEOUT_SECONDS.to_owned(),
-                Some("30".to_owned()),
+                EDC_VAULT_TENANTID.to_owned(),
+                Some("1".to_owned()),
+            );
+            result.insert(
+                EDC_VAULT_CERTIFICATE.to_owned(),
+                Some("./resources".to_owned()),   // TODO
+            );
+            result.insert(
+                EDC_VAULT_NAME.to_owned(),
+                Some("ionos".to_owned()),
+            );
+            result.insert(
+                EDC_VAULT_HASHICORP_URL.to_owned(),
+                Some("http://consumer-vault:8200".to_owned()),  // TODO probably also a CRD arg
+            ); 
+            result.insert(
+                EDC_VAULT_HASHICORP_TOKEN.to_owned(),
+                Some("dev-token".to_owned()),  // TODO needs to be provided as a secret
             );
             result.insert(
                 EDC_KEYSTORE.to_owned(),
@@ -417,10 +437,16 @@ impl Configuration for ConnectorConfigFragment {
                     STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_VAULT
                 )),
             );
+
             result.insert(
                 EDC_IONOS_ENDPOINT.to_owned(),
                 Some("s3-eu-central-1.ionoscloud.com".to_owned()),
             );
+            // TODO the token should be read from a secret
+            // result.insert(
+            //     EDC_IONOS_TOKEN.to_owned(),
+            //     Some("....".to_owned()),
+            // );
         }
 
         Ok(result)
