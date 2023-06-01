@@ -68,6 +68,10 @@ dependencies {
 	
 	implementation("${edcGroup}:vault-hashicorp:${edcVersion}")
 	
+	implementation("${edcGroup}:data-plane-client:${edcVersion}")
+	
+	implementation("${edcGroup}:transfer-data-plane:${edcVersion}")
+	
 	//Ionos Extension 
 	implementation(project(":edc-ionos-extension:provision-ionos-s3"))
 	
