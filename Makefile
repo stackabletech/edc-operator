@@ -39,3 +39,6 @@ vector:
 	helm --version=0.21.0 install vector-aggregator vector/vector -f ./manifests/vector-values.yaml
 
 apply-vector: opensearch vector
+
+init-cluster:
+	stackablectl op in secret commons -k
