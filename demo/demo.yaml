@@ -10,15 +10,17 @@ spec:
   clusterConfig:
     listenerClass: external-unstable
     certSecret: connector-cert
-    s3:
-      inline:
-        bucketName: source-bucket
-        connection:
-          inline:
-            host: ionos.com # TODO
-            port: 443       # TODO
-            credentials:
-              secretClass: s3-credentials-class
+    ionos:
+      tokenSecret: ionos-token
+      s3:
+        inline:
+          bucketName: source-bucket
+          connection:
+            inline:
+              host: ionos.com # TODO
+              port: 443       # TODO
+              credentials:
+                secretClass: s3-credentials-class
   connectors:
     roleGroups:
       default:
@@ -35,19 +37,19 @@ spec:
   clusterConfig:
     listenerClass: external-unstable
     certSecret: connector-cert
-    s3:
-      inline:
-        bucketName: destination-bucket
-        connection:
-          inline:
-            host: ionos.com # TODO
-            port: 443       # TODO
-            credentials:
-              secretClass: s3-credentials-class
+    ionos:
+      tokenSecret: ionos-token
+      s3:
+        inline:
+          bucketName: destination-bucket
+          connection:
+            inline:
+              host: ionos.com # TODO
+              port: 443       # TODO
+              credentials:
+                secretClass: s3-credentials-class
+
   connectors:
     roleGroups:
       default:
         replicas: 1
-        configOverrides:
-          config.properties:
-            edc.ionos.token: YOUR_TOKEN_HERE

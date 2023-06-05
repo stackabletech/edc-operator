@@ -204,7 +204,7 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
     let s3_bucket_spec = hello
         .spec
         .cluster_config
-        .s3
+         .ionos.s3
         .resolve(&ctx.client, hello.get_namespace())
         .await
         .context(ResolveS3ConnectionSnafu)?;
@@ -594,6 +594,7 @@ fn build_server_rolegroup_statefulset(
             }),
             ..Probe::default()
         })
+        .add_env_var_from_secret("EDC_IONOS_TOKEN", edc.spec.cluster_config.ionos.token_secret.to_owned(), "EDC_IONOS_TOKEN")
         .build();
 
     pod_builder
