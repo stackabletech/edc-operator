@@ -4,13 +4,12 @@ use crate::OPERATOR_NAME;
 
 use crate::crd::{
     ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, CONFIG_PROPERTIES,
-    EDC_IONOS_ACCESS_KEY, EDC_IONOS_ENDPOINT, EDC_IONOS_SECRET_KEY, HTTP_PORT, HTTP_PORT_NAME,
-    IDS_PORT, IDS_PORT_NAME, MANAGEMENT_PORT, MANAGEMENT_PORT_NAME, SECRET_KEY_S3_ACCESS_KEY,
-    SECRET_KEY_S3_SECRET_KEY, STACKABLE_CERTS_DIR, STACKABLE_CERT_MOUNT_DIR,
-    STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME,
-    STACKABLE_CONFIG_MOUNT_DIR, STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR,
-    STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME,
-    STACKABLE_SECRETS_DIR,
+    EDC_FS_CONFIG, EDC_IONOS_ACCESS_KEY, EDC_IONOS_ENDPOINT, EDC_IONOS_SECRET_KEY, HTTP_PORT,
+    HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME, LOGGING_PROPERTIES, MANAGEMENT_PORT,
+    MANAGEMENT_PORT_NAME, SECRET_KEY_S3_ACCESS_KEY, SECRET_KEY_S3_SECRET_KEY, STACKABLE_CERTS_DIR,
+    STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CONFIG_DIR,
+    STACKABLE_CONFIG_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME,
+    STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME, STACKABLE_SECRETS_DIR,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
 use stackable_operator::builder::{
@@ -553,8 +552,14 @@ fn build_server_rolegroup_statefulset(
     let mut java_cmd = vec![];
     java_cmd.extend(args);
     java_cmd.push("java".to_string());
-    java_cmd.push("-Djava.util.logging.config.file=./config/logging.properties".to_string());
-    java_cmd.push("-Dedc.fs.config=./mount/config/config.properties".to_string());
+    java_cmd.push(format!(
+        "-D{}={}/{}",
+        EDC_FS_CONFIG, STACKABLE_CONFIG_DIR, CONFIG_PROPERTIES
+    ));
+    java_cmd.push(format!(
+        "-Djava.util.logging.config.file={}/{}",
+        STACKABLE_CONFIG_DIR, LOGGING_PROPERTIES
+    ));
 
     // Add S3 secret and access keys from the files mounted by the secret Operator
     if let Some(c) = s3_conn {
@@ -575,7 +580,6 @@ fn build_server_rolegroup_statefulset(
         .args(vec![format!("{}", java_cmd.join(" "))])
         .image_from_product_image(resolved_product_image)
         .add_volume_mount(STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_DIR)
-        .add_volume_mount(STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR)
         .add_volume_mount(STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CERT_MOUNT_DIR)
         .add_volume_mount(STACKABLE_LOG_DIR_NAME, STACKABLE_LOG_DIR)
         .add_volume_mount(
@@ -626,16 +630,8 @@ fn build_server_rolegroup_statefulset(
         })
         .image_pull_secrets_from_product_image(resolved_product_image)
         .add_container(container_edc)
-        .add_volume(Volume {
-            name: STACKABLE_CONFIG_DIR_NAME.to_string(),
-            empty_dir: Some(EmptyDirVolumeSource {
-                medium: None,
-                size_limit: Some(Quantity("10Mi".to_string())),
-            }),
-            ..Volume::default()
-        })
         .add_volume(stackable_operator::k8s_openapi::api::core::v1::Volume {
-            name: STACKABLE_CONFIG_MOUNT_DIR_NAME.to_string(),
+            name: STACKABLE_CONFIG_DIR_NAME.to_string(),
             config_map: Some(ConfigMapVolumeSource {
                 name: Some(rolegroup_ref.object_name()),
                 ..Default::default()

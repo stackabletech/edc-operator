@@ -31,8 +31,6 @@ pub const APP_NAME: &str = "edc";
 pub const STACKABLE_SECRETS_DIR: &str = "/stackable/secrets";
 pub const STACKABLE_CONFIG_DIR: &str = "/stackable/config";
 pub const STACKABLE_CONFIG_DIR_NAME: &str = "config";
-pub const STACKABLE_CONFIG_MOUNT_DIR: &str = "/stackable/mount/config";
-pub const STACKABLE_CONFIG_MOUNT_DIR_NAME: &str = "config-mount";
 pub const STACKABLE_CERT_MOUNT_DIR: &str = "/stackable/mount/cert";
 pub const STACKABLE_CERT_MOUNT_DIR_NAME: &str = "cert-mount";
 pub const STACKABLE_LOG_DIR: &str = "/stackable/log";
@@ -42,11 +40,13 @@ pub const STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME: &str = "log-config-mount";
 pub const STACKABLE_CERTS_DIR: &str = "/stackable/certificates";
 // config file names
 pub const CONFIG_PROPERTIES: &str = "config.properties";
+pub const LOGGING_PROPERTIES: &str = "logging.properties";
 // secret keys
 pub const STACKABLE_CERT_MOUNT_KEYSTORE: &str = "cert.pfx";
 pub const STACKABLE_CERT_MOUNT_VAULT: &str = "vault.properties";
 // config properties
 pub const EDC_API_AUTH_KEY: &str = "edc.api.auth.key";
+pub const EDC_FS_CONFIG: &str = "edc.fs.config";
 pub const EDC_HOSTNAME: &str = "edc.hostname";
 pub const EDC_IDS_ID: &str = "edc.ids.id";
 pub const EDC_IONOS_ACCESS_KEY: &str = "edc.ionos.access.key";
