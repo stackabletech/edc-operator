@@ -10,16 +10,39 @@ spec:
   clusterConfig:
     listenerClass: external-unstable
     certSecret: connector-cert
-    s3:
-      inline:
-        bucketName: my-bucket
-        connection:
-          inline:
-            host: ionos.com # TODO
-            port: 443       # TODO
-            credentials:
-              secretClass: s3-credentials-class
+    vectorAggregatorConfigMapName: vector-aggregator-discovery
+    ionos:
+      tokenSecret: ionos-token
+      s3:
+        inline:
+          bucketName: my-bucket
+          connection:
+            inline:
+              host: ionos.com # TODO
+              port: 443       # TODO
+              credentials:
+                secretClass: s3-credentials-class
   connectors:
+    config:
+      logging:
+        enableVectorAgent: true
+        containers:
+          connector:
+            console:
+              level: INFO
+            file:
+              level: INFO
+            loggers:
+              ROOT:
+                level: INFO
+          vector:
+            console:
+              level: INFO
+            file:
+              level: INFO
+            loggers:
+              ROOT:
+                level: INFO
     roleGroups:
       default:
         replicas: 1

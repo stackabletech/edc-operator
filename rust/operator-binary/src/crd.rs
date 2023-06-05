@@ -31,8 +31,6 @@ pub const APP_NAME: &str = "edc";
 pub const STACKABLE_SECRETS_DIR: &str = "/stackable/secrets";
 pub const STACKABLE_CONFIG_DIR: &str = "/stackable/config";
 pub const STACKABLE_CONFIG_DIR_NAME: &str = "config";
-pub const STACKABLE_CONFIG_MOUNT_DIR: &str = "/stackable/mount/config";
-pub const STACKABLE_CONFIG_MOUNT_DIR_NAME: &str = "config-mount";
 pub const STACKABLE_CERT_MOUNT_DIR: &str = "/stackable/mount/cert";
 pub const STACKABLE_CERT_MOUNT_DIR_NAME: &str = "cert-mount";
 pub const STACKABLE_LOG_DIR: &str = "/stackable/log";
@@ -42,40 +40,25 @@ pub const STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME: &str = "log-config-mount";
 pub const STACKABLE_CERTS_DIR: &str = "/stackable/certificates";
 // config file names
 pub const CONFIG_PROPERTIES: &str = "config.properties";
-pub const HIVE_LOG4J2_PROPERTIES: &str = "hive-log4j2.properties";
+pub const LOGGING_PROPERTIES: &str = "logging.properties";
 // secret keys
 pub const STACKABLE_CERT_MOUNT_KEYSTORE: &str = "cert.pfx";
 pub const STACKABLE_CERT_MOUNT_VAULT: &str = "vault.properties";
 // config properties
 pub const EDC_API_AUTH_KEY: &str = "edc.api.auth.key";
-pub const EDC_DATAPLANE_TOKEN_VALIDATION_ENDPOINT: &str = "edc.dataplane.token.validation.endpoint";
+pub const EDC_FS_CONFIG: &str = "edc.fs.config";
 pub const EDC_HOSTNAME: &str = "edc.hostname";
 pub const EDC_IDS_ID: &str = "edc.ids.id";
 pub const EDC_IONOS_ACCESS_KEY: &str = "edc.ionos.access.key";
 pub const EDC_IONOS_SECRET_KEY: &str = "edc.ionos.secret.key";
 pub const EDC_IONOS_ENDPOINT: &str = "edc.ionos.endpoint";
-pub const EDC_IONOS_TOKEN: &str = "edc.ionos.token";
 pub const EDC_KEYSTORE: &str = "edc.keystore";
 pub const WEB_HTTP_PORT: &str = "web.http.port";
 pub const WEB_HTTP_PATH: &str = "web.http.path";
-pub const WEB_HTTP_CONTROL_PORT: &str = "web.http.control.port";
-pub const WEB_HTTP_CONTROL_PATH: &str = "web.http.control.path";
 pub const WEB_HTTP_MANAGEMENT_PORT: &str = "web.http.management.port";
 pub const WEB_HTTP_MANAGEMENT_PATH: &str = "web.http.management.path";
 pub const WEB_HTTP_IDS_PORT: &str = "web.http.ids.port";
 pub const WEB_HTTP_IDS_PATH: &str = "web.http.ids.path";
-pub const WEB_HTTP_PROTOCOL_PORT: &str = "web.http.protocol.port";
-pub const WEB_HTTP_PROTOCOL_PATH: &str = "web.http.protocol.path";
-pub const WEB_HTTP_PUBLIC_PORT: &str = "web.http.public.port";
-pub const WEB_HTTP_PUBLIC_PATH: &str = "web.http.public.path";
-pub const EDC_PUBLIC_KEY_ALIAS: &str = "edc.public.key.alias";
-pub const EDC_RECEIVER_HTTP_ENDPOINT: &str = "edc.receiver.http.endpoint";
-pub const EDC_TRANSFER_DATAPLANE_TOKEN_SIGNER_PRIVATEKEY_ALIAS: &str =
-    "edc.transfer.dataplane.token.signer.privatekey.alias";
-pub const EDC_TRANSFER_PROXY_TOKEN_SIGNER_PRIVATEKEY_ALIAS: &str =
-    "edc.transfer.proxy.token.signer.privatekey.alias";
-pub const EDC_TRANSFER_PROXY_TOKEN_VERIFIER_PUBLICKEY_ALIAS: &str =
-    "edc.transfer.proxy.token.verifier.publickey.alias";
 pub const EDC_VAULT: &str = "edc.vault";
 pub const EDC_VAULT_CERTIFICATE: &str = "edc.vault.certificate";
 pub const EDC_VAULT_CLIENTID: &str = "edc.vault.clientid";
@@ -100,6 +83,10 @@ pub const IDS_PORT: u16 = 8282;
 //pub const PROTOCOL_PORT: u16 = 19195;
 //pub const PUBLIC_PORT_NAME: &str = "public";
 //pub const PUBLIC_PORT: u16 = 19291;
+
+// logging
+pub const _JAVA_LOGGING: &str = "java-logging.properties";
+pub const EDC_CONNECTOR_JAVA_LOG_FILE: &str = "logging.properties";
 
 #[derive(Snafu, Debug)]
 pub enum Error {
@@ -408,29 +395,20 @@ impl Configuration for ConnectorConfigFragment {
             //     Some("public-key".to_owned()),
             // );
 
-            result.insert(
-                EDC_VAULT_CLIENTID.to_owned(),
-                Some("company1".to_owned()),
-            );
-            result.insert(
-                EDC_VAULT_TENANTID.to_owned(),
-                Some("1".to_owned()),
-            );
+            result.insert(EDC_VAULT_CLIENTID.to_owned(), Some("company1".to_owned()));
+            result.insert(EDC_VAULT_TENANTID.to_owned(), Some("1".to_owned()));
             result.insert(
                 EDC_VAULT_CERTIFICATE.to_owned(),
-                Some("./resources".to_owned()),   // TODO
+                Some("./resources".to_owned()), // TODO
             );
-            result.insert(
-                EDC_VAULT_NAME.to_owned(),
-                Some("ionos".to_owned()),
-            );
+            result.insert(EDC_VAULT_NAME.to_owned(), Some("ionos".to_owned()));
             result.insert(
                 EDC_VAULT_HASHICORP_URL.to_owned(),
-                Some("http://consumer-vault:8200".to_owned()),  // TODO probably also a CRD arg
-            ); 
+                Some("http://consumer-vault:8200".to_owned()), // TODO probably also a CRD arg
+            );
             result.insert(
                 EDC_VAULT_HASHICORP_TOKEN.to_owned(),
-                Some("dev-token".to_owned()),  // TODO needs to be provided as a secret
+                Some("dev-token".to_owned()), // TODO needs to be provided as a secret
             );
             result.insert(
                 EDC_KEYSTORE.to_owned(),

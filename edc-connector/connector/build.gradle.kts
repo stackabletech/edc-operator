@@ -69,9 +69,9 @@ dependencies {
 	implementation("${edcGroup}:vault-hashicorp:${edcVersion}")
 	
 	implementation("${edcGroup}:data-plane-client:${edcVersion}")
-	
+
 	implementation("${edcGroup}:transfer-data-plane:${edcVersion}")
-	
+
 	//Ionos Extension 
 	implementation(project(":edc-ionos-extension:provision-ionos-s3"))
 	
@@ -83,6 +83,8 @@ dependencies {
 	
 	implementation("de.fraunhofer.iais.eis.ids.infomodel:java:${fraunhoferVersion}")
 
+	//Logging
+	implementation("${edcGroup}:monitor-jdk-logger:${edcVersion}")
 }
 
 repositories {

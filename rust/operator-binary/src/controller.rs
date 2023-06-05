@@ -4,17 +4,17 @@ use crate::OPERATOR_NAME;
 
 use crate::crd::{
     ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, CONFIG_PROPERTIES,
-    EDC_IONOS_ACCESS_KEY, EDC_IONOS_ENDPOINT,
-    EDC_IONOS_SECRET_KEY, HTTP_PORT, HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME, MANAGEMENT_PORT,
-    MANAGEMENT_PORT_NAME,
-    SECRET_KEY_S3_ACCESS_KEY, SECRET_KEY_S3_SECRET_KEY, STACKABLE_CERTS_DIR,
+    EDC_FS_CONFIG, EDC_IONOS_ACCESS_KEY, EDC_IONOS_ENDPOINT, EDC_IONOS_SECRET_KEY, HTTP_PORT,
+    HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME, LOGGING_PROPERTIES, MANAGEMENT_PORT,
+    MANAGEMENT_PORT_NAME, SECRET_KEY_S3_ACCESS_KEY, SECRET_KEY_S3_SECRET_KEY, STACKABLE_CERTS_DIR,
     STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CONFIG_DIR,
-    STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR, STACKABLE_CONFIG_MOUNT_DIR_NAME,
-    STACKABLE_LOG_CONFIG_MOUNT_DIR, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR,
-    STACKABLE_LOG_DIR_NAME, STACKABLE_SECRETS_DIR, WEB_HTTP_PORT,
+    STACKABLE_CONFIG_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME,
+    STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME, STACKABLE_SECRETS_DIR,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
-use stackable_operator::builder::{SecretOperatorVolumeSourceBuilder, VolumeBuilder, PodSecurityContextBuilder};
+use stackable_operator::builder::{
+    PodSecurityContextBuilder, SecretOperatorVolumeSourceBuilder, VolumeBuilder,
+};
 use stackable_operator::client::GetApi;
 use stackable_operator::commons::s3::S3ConnectionSpec;
 use stackable_operator::commons::tls::{CaCert, TlsVerification};
@@ -63,14 +63,14 @@ use std::{
 use strum::EnumDiscriminants;
 use tracing::warn;
 
-pub const EDC_CONTROLLER_NAME: &str = "hellocluster";
-const DOCKER_IMAGE_BASE_NAME: &str = "hello";
+pub const EDC_CONTROLLER_NAME: &str = "edccluster";
+const DOCKER_IMAGE_BASE_NAME: &str = "edc";
 
-pub const MAX_HIVE_LOG_FILES_SIZE_IN_MIB: u32 = 10;
+pub const MAX_LOG_FILES_SIZE_IN_MIB: u32 = 10;
 
 const OVERFLOW_BUFFER_ON_LOG_VOLUME_IN_MIB: u32 = 1;
 const LOG_VOLUME_SIZE_IN_MIB: u32 =
-    MAX_HIVE_LOG_FILES_SIZE_IN_MIB + OVERFLOW_BUFFER_ON_LOG_VOLUME_IN_MIB;
+    MAX_LOG_FILES_SIZE_IN_MIB + OVERFLOW_BUFFER_ON_LOG_VOLUME_IN_MIB;
 
 pub struct Ctx {
     pub client: stackable_operator::client::Client,
@@ -148,8 +148,8 @@ pub enum Error {
     },
     #[snafu(display("failed to resolve and merge resource config for role and role group"))]
     FailedToResolveResourceConfig { source: crate::crd::Error },
-    #[snafu(display("failed to create hello container [{name}]"))]
-    FailedToCreateHelloContainer {
+    #[snafu(display("failed to create EDC container [{name}]"))]
+    FailedToCreateEdcContainer {
         source: stackable_operator::error::Error,
         name: String,
     },
@@ -195,24 +195,25 @@ impl ReconcilerError for Error {
     }
 }
 
-pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action> {
+pub async fn reconcile_edc(edc: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action> {
     tracing::info!("Starting reconcile");
     let client = &ctx.client;
     let resolved_product_image: ResolvedProductImage =
-        hello.spec.image.resolve(DOCKER_IMAGE_BASE_NAME);
+        edc.spec.image.resolve(DOCKER_IMAGE_BASE_NAME);
 
-    let s3_bucket_spec = hello
+    let s3_bucket_spec = edc
         .spec
         .cluster_config
-         .ionos.s3
-        .resolve(&ctx.client, hello.get_namespace())
+        .ionos
+        .s3
+        .resolve(&ctx.client, edc.get_namespace())
         .await
         .context(ResolveS3ConnectionSnafu)?;
 
     let validated_config = validate_all_roles_and_groups_config(
         &resolved_product_image.product_version,
         &transform_all_roles_to_config(
-            hello.as_ref(),
+            edc.as_ref(),
             [(
                 EDCRole::Connector.to_string(),
                 (
@@ -221,7 +222,7 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
                         PropertyNameKind::Cli,
                         PropertyNameKind::File(CONFIG_PROPERTIES.to_string()),
                     ],
-                    hello.spec.connectors.clone().context(NoServerRoleSnafu)?,
+                    edc.spec.connectors.clone().context(NoServerRoleSnafu)?,
                 ),
             )]
             .into(),
@@ -242,13 +243,13 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
         APP_NAME,
         OPERATOR_NAME,
         EDC_CONTROLLER_NAME,
-        &hello.object_ref(&()),
-        ClusterResourceApplyStrategy::from(&hello.spec.cluster_operation),
+        &edc.object_ref(&()),
+        ClusterResourceApplyStrategy::from(&edc.spec.cluster_operation),
     )
     .context(CreateClusterResourcesSnafu)?;
 
     let (rbac_sa, rbac_rolebinding) = build_rbac_resources(
-        hello.as_ref(),
+        edc.as_ref(),
         APP_NAME,
         cluster_resources.get_required_labels(),
     )
@@ -263,7 +264,7 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
         .await
         .context(ApplyRoleBindingSnafu)?;
 
-    let server_role_service = build_server_role_service(&hello, &resolved_product_image)?;
+    let server_role_service = build_server_role_service(&edc, &resolved_product_image)?;
 
     // we have to get the assigned ports
     cluster_resources
@@ -271,22 +272,22 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
         .await
         .context(ApplyRoleServiceSnafu)?;
 
-    let vector_aggregator_address = resolve_vector_aggregator_address(&hello, client)
+    let vector_aggregator_address = resolve_vector_aggregator_address(&edc, client)
         .await
         .context(ResolveVectorAggregatorAddressSnafu)?;
 
     let mut ss_cond_builder = StatefulSetConditionBuilder::default();
 
     for (rolegroup_name, rolegroup_config) in server_config.iter() {
-        let rolegroup = hello.server_rolegroup_ref(rolegroup_name);
+        let rolegroup = edc.server_rolegroup_ref(rolegroup_name);
 
-        let config = hello
+        let config = edc
             .merged_config(&EDCRole::Connector, &rolegroup.role_group)
             .context(FailedToResolveResourceConfigSnafu)?;
 
-        let rg_service = build_rolegroup_service(&hello, &resolved_product_image, &rolegroup)?;
+        let rg_service = build_rolegroup_service(&edc, &resolved_product_image, &rolegroup)?;
         let rg_configmap = build_connector_rolegroup_config_map(
-            &hello,
+            &edc,
             &resolved_product_image,
             &rolegroup,
             rolegroup_config,
@@ -295,7 +296,7 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
             vector_aggregator_address.as_deref(),
         )?;
         let rg_statefulset = build_server_rolegroup_statefulset(
-            &hello,
+            &edc,
             &resolved_product_image,
             &rolegroup,
             rolegroup_config,
@@ -329,17 +330,17 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
     }
 
     let cluster_operation_cond_builder =
-        ClusterOperationsConditionBuilder::new(&hello.spec.cluster_operation);
+        ClusterOperationsConditionBuilder::new(&edc.spec.cluster_operation);
 
     let status = EDCClusterStatus {
         conditions: compute_conditions(
-            hello.as_ref(),
+            edc.as_ref(),
             &[&ss_cond_builder, &cluster_operation_cond_builder],
         ),
     };
 
     client
-        .apply_patch_status(OPERATOR_NAME, &*hello, &status)
+        .apply_patch_status(OPERATOR_NAME, &*edc, &status)
         .await
         .context(ApplyStatusSnafu)?;
 
@@ -352,31 +353,31 @@ pub async fn reconcile_edc(hello: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Acti
 }
 
 pub fn build_server_role_service(
-    hello: &EDCCluster,
+    edc: &EDCCluster,
     resolved_product_image: &ResolvedProductImage,
 ) -> Result<Service> {
     let role_name = EDCRole::Connector.to_string();
 
-    let role_svc_name = hello
+    let role_svc_name = edc
         .server_role_service_name()
         .context(GlobalServiceNameNotFoundSnafu)?;
     Ok(Service {
         metadata: ObjectMetaBuilder::new()
-            .name_and_namespace(hello)
+            .name_and_namespace(edc)
             .name(role_svc_name)
-            .ownerreference_from_resource(hello, None, Some(true))
+            .ownerreference_from_resource(edc, None, Some(true))
             .context(ObjectMissingMetadataForOwnerRefSnafu)?
             .with_recommended_labels(build_recommended_labels(
-                hello,
+                edc,
                 &resolved_product_image.app_version_label,
                 &role_name,
                 "global",
             ))
             .build(),
         spec: Some(ServiceSpec {
-            type_: Some(hello.spec.cluster_config.listener_class.k8s_service_type()),
+            type_: Some(edc.spec.cluster_config.listener_class.k8s_service_type()),
             ports: Some(service_ports()),
-            selector: Some(role_selector_labels(hello, APP_NAME, &role_name)),
+            selector: Some(role_selector_labels(edc, APP_NAME, &role_name)),
             ..ServiceSpec::default()
         }),
         status: None,
@@ -458,18 +459,18 @@ fn build_connector_rolegroup_config_map(
 ///
 /// This is mostly useful for internal communication between peers, or for clients that perform client-side load balancing.
 fn build_rolegroup_service(
-    hello: &EDCCluster,
+    edc: &EDCCluster,
     resolved_product_image: &ResolvedProductImage,
     rolegroup: &RoleGroupRef<EDCCluster>,
 ) -> Result<Service> {
     Ok(Service {
         metadata: ObjectMetaBuilder::new()
-            .name_and_namespace(hello)
+            .name_and_namespace(edc)
             .name(&rolegroup.object_name())
-            .ownerreference_from_resource(hello, None, Some(true))
+            .ownerreference_from_resource(edc, None, Some(true))
             .context(ObjectMissingMetadataForOwnerRefSnafu)?
             .with_recommended_labels(build_recommended_labels(
-                hello,
+                edc,
                 &resolved_product_image.app_version_label,
                 &rolegroup.role,
                 &rolegroup.role_group,
@@ -481,7 +482,7 @@ fn build_rolegroup_service(
             cluster_ip: Some("None".to_string()),
             ports: Some(service_ports()),
             selector: Some(role_group_selector_labels(
-                hello,
+                edc,
                 APP_NAME,
                 &rolegroup.role,
                 &rolegroup.role_group,
@@ -514,34 +515,51 @@ fn build_server_rolegroup_statefulset(
         .role_groups
         .get(&rolegroup_ref.role_group);
     let mut container_builder =
-        ContainerBuilder::new(APP_NAME).context(FailedToCreateHelloContainerSnafu {
+        ContainerBuilder::new(APP_NAME).context(FailedToCreateEdcContainerSnafu {
             name: APP_NAME.to_string(),
         })?;
 
     for (property_name_kind, config) in metastore_config {
-        match property_name_kind {
-            PropertyNameKind::Env => {
-                // overrides
-                for (property_name, property_value) in config {
-                    if property_name.is_empty() {
-                        warn!("Received empty property_name for ENV... skipping");
-                        continue;
-                    }
-                    container_builder.add_env_var(property_name, property_value);
+        if property_name_kind == &PropertyNameKind::Env {
+            // overrides
+            for (property_name, property_value) in config {
+                if property_name.is_empty() {
+                    warn!("Received empty property_name for ENV... skipping");
+                    continue;
                 }
+                container_builder.add_env_var(property_name, property_value);
             }
-            _ => {}
         }
     }
 
     let mut pod_builder = PodBuilder::new();
+    let mut args = Vec::new();
+
+    if let Some(ContainerLogConfig {
+        choice: Some(ContainerLogConfigChoice::Automatic(log_config)),
+    }) = merged_config.logging.containers.get(&Container::Connector)
+    {
+        args.push(product_logging::framework::capture_shell_output(
+            STACKABLE_LOG_DIR,
+            "edc",
+            log_config,
+        ));
+    }
 
     // S3
     add_s3_volume_and_volume_mounts(s3_conn, &mut container_builder, &mut pod_builder)?;
 
     let mut java_cmd = vec![];
+    java_cmd.extend(args);
     java_cmd.push("java".to_string());
-    java_cmd.push("-Dedc.fs.config=./mount/config/config.properties".to_string());
+    java_cmd.push(format!(
+        "-D{}={}/{}",
+        EDC_FS_CONFIG, STACKABLE_CONFIG_DIR, CONFIG_PROPERTIES
+    ));
+    java_cmd.push(format!(
+        "-Djava.util.logging.config.file={}/{}",
+        STACKABLE_CONFIG_DIR, LOGGING_PROPERTIES
+    ));
 
     // Add S3 secret and access keys from the files mounted by the secret Operator
     if let Some(c) = s3_conn {
@@ -556,12 +574,12 @@ fn build_server_rolegroup_statefulset(
     // We add this at the and, as the .jar file should be the last argument to the call to the java binary
     java_cmd.extend(vec!["-jar".to_string(), "connector.jar".to_string()]);
 
-    let container_hello = container_builder
+    // TODO if a custom container command is needed, add it here (.command)
+    let container_edc = container_builder
         .command(vec!["/bin/bash".to_string(), "-c".to_string()])
         .args(vec![format!("{}", java_cmd.join(" "))])
         .image_from_product_image(resolved_product_image)
         .add_volume_mount(STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_DIR)
-        .add_volume_mount(STACKABLE_CONFIG_MOUNT_DIR_NAME, STACKABLE_CONFIG_MOUNT_DIR)
         .add_volume_mount(STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CERT_MOUNT_DIR)
         .add_volume_mount(STACKABLE_LOG_DIR_NAME, STACKABLE_LOG_DIR)
         .add_volume_mount(
@@ -594,7 +612,11 @@ fn build_server_rolegroup_statefulset(
             }),
             ..Probe::default()
         })
-        .add_env_var_from_secret("EDC_IONOS_TOKEN", edc.spec.cluster_config.ionos.token_secret.to_owned(), "EDC_IONOS_TOKEN")
+        .add_env_var_from_secret(
+            "EDC_IONOS_TOKEN",
+            edc.spec.cluster_config.ionos.token_secret.to_owned(),
+            "EDC_IONOS_TOKEN",
+        )
         .build();
 
     pod_builder
@@ -607,17 +629,9 @@ fn build_server_rolegroup_statefulset(
             ))
         })
         .image_pull_secrets_from_product_image(resolved_product_image)
-        .add_container(container_hello)
-        .add_volume(Volume {
-            name: STACKABLE_CONFIG_DIR_NAME.to_string(),
-            empty_dir: Some(EmptyDirVolumeSource {
-                medium: None,
-                size_limit: Some(Quantity("10Mi".to_string())),
-            }),
-            ..Volume::default()
-        })
+        .add_container(container_edc)
         .add_volume(stackable_operator::k8s_openapi::api::core::v1::Volume {
-            name: STACKABLE_CONFIG_MOUNT_DIR_NAME.to_string(),
+            name: STACKABLE_CONFIG_DIR_NAME.to_string(),
             config_map: Some(ConfigMapVolumeSource {
                 name: Some(rolegroup_ref.object_name()),
                 ..Default::default()
