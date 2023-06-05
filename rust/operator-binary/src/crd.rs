@@ -412,29 +412,20 @@ impl Configuration for ConnectorConfigFragment {
             //     Some("public-key".to_owned()),
             // );
 
-            result.insert(
-                EDC_VAULT_CLIENTID.to_owned(),
-                Some("company1".to_owned()),
-            );
-            result.insert(
-                EDC_VAULT_TENANTID.to_owned(),
-                Some("1".to_owned()),
-            );
+            result.insert(EDC_VAULT_CLIENTID.to_owned(), Some("company1".to_owned()));
+            result.insert(EDC_VAULT_TENANTID.to_owned(), Some("1".to_owned()));
             result.insert(
                 EDC_VAULT_CERTIFICATE.to_owned(),
-                Some("./resources".to_owned()),   // TODO
+                Some("./resources".to_owned()), // TODO
             );
-            result.insert(
-                EDC_VAULT_NAME.to_owned(),
-                Some("ionos".to_owned()),
-            );
+            result.insert(EDC_VAULT_NAME.to_owned(), Some("ionos".to_owned()));
             result.insert(
                 EDC_VAULT_HASHICORP_URL.to_owned(),
-                Some("http://consumer-vault:8200".to_owned()),  // TODO probably also a CRD arg
-            ); 
+                Some("http://consumer-vault:8200".to_owned()), // TODO probably also a CRD arg
+            );
             result.insert(
                 EDC_VAULT_HASHICORP_TOKEN.to_owned(),
-                Some("dev-token".to_owned()),  // TODO needs to be provided as a secret
+                Some("dev-token".to_owned()), // TODO needs to be provided as a secret
             );
             result.insert(
                 EDC_KEYSTORE.to_owned(),
