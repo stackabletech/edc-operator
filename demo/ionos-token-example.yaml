@@ -1,0 +1,7 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ionos-token
+stringData:
+  EDC_IONOS_TOKEN: YOUR_TOKEN_HERE

@@ -4,20 +4,22 @@ use crate::OPERATOR_NAME;
 
 use crate::crd::{
     ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, CONFIG_PROPERTIES,
-    CONTROL_PORT, CONTROL_PORT_NAME, EDC_IONOS_ACCESS_KEY, EDC_IONOS_ENDPOINT,
-    EDC_IONOS_SECRET_KEY, HTTP_PORT, HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME, MANAGEMENT_PORT,
-    MANAGEMENT_PORT_NAME, PROTOCOL_PORT, PROTOCOL_PORT_NAME, PUBLIC_PORT, PUBLIC_PORT_NAME,
-    SECRET_KEY_S3_ACCESS_KEY, SECRET_KEY_S3_SECRET_KEY, STACKABLE_CERT_DIR,
-    STACKABLE_CERT_DIR_NAME, STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME, STACKABLE_LOG_DIR,
+    EDC_IONOS_ACCESS_KEY, EDC_IONOS_ENDPOINT, EDC_IONOS_SECRET_KEY, HTTP_PORT, HTTP_PORT_NAME,
+    IDS_PORT, IDS_PORT_NAME, MANAGEMENT_PORT, MANAGEMENT_PORT_NAME, SECRET_KEY_S3_ACCESS_KEY,
+    SECRET_KEY_S3_SECRET_KEY, STACKABLE_CERT_DIR, STACKABLE_CERT_DIR_NAME, STACKABLE_CONFIG_DIR,
+    STACKABLE_CONFIG_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR,
     STACKABLE_LOG_DIR_NAME, STACKABLE_SECRETS_DIR,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
-use stackable_operator::builder::{SecretOperatorVolumeSourceBuilder, VolumeBuilder};
+use stackable_operator::builder::{
+    PodSecurityContextBuilder, SecretOperatorVolumeSourceBuilder, VolumeBuilder,
+};
 use stackable_operator::client::GetApi;
 use stackable_operator::commons::s3::S3ConnectionSpec;
 use stackable_operator::commons::tls::{CaCert, TlsVerification};
 use stackable_operator::k8s_openapi::api::core::v1::SecretVolumeSource;
 use stackable_operator::product_config::writer::to_java_properties_string;
+use stackable_operator::product_logging::spec::{ConfigMapLogConfig, CustomContainerLogConfig};
 use stackable_operator::{
     builder::{ConfigMapBuilder, ContainerBuilder, ObjectMetaBuilder, PodBuilder},
     cluster_resources::{ClusterResourceApplyStrategy, ClusterResources},
@@ -199,6 +201,7 @@ pub async fn reconcile_edc(edc: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action
     let s3_bucket_spec = edc
         .spec
         .cluster_config
+        .ionos
         .s3
         .resolve(&ctx.client, edc.get_namespace())
         .await
@@ -531,7 +534,7 @@ fn build_server_rolegroup_statefulset(
 
     if let Some(ContainerLogConfig {
         choice: Some(ContainerLogConfigChoice::Automatic(log_config)),
-    }) = merged_config.logging.containers.get(&Container::Edc)
+    }) = merged_config.logging.containers.get(&Container::Connector)
     {
         args.push(product_logging::framework::capture_shell_output(
             STACKABLE_LOG_DIR,
@@ -543,48 +546,44 @@ fn build_server_rolegroup_statefulset(
     // S3
     add_s3_volume_and_volume_mounts(s3_conn, &mut container_builder, &mut pod_builder)?;
 
-    args.extend(vec![
-        "java".to_string(),
-        "-Djava.util.logging.config.file=./config/logging.properties".to_string(),
-        "-Dedc.fs.config=./mount/config/config.properties".to_string(),
-        "-Dedc.keystore=./mount/cert/cert.pfx".to_string(),
-        "-Dedc.keystore.password=123456".to_string(),
-        "-Dedc.vault=./mount/cert/vault.properties".to_string(),
-    ]);
+    let mut java_cmd = vec![];
+    java_cmd.extend(args);
+    java_cmd.push("java".to_string());
+    java_cmd.push("-Djava.util.logging.config.file=./config/logging.properties".to_string());
+    java_cmd.push("-Dedc.fs.config=./mount/config/config.properties".to_string());
 
     // Add S3 secret and access keys from the files mounted by the secret Operator
     if let Some(c) = s3_conn {
         if c.credentials.is_some() {
             let path = format!("{}/{}", STACKABLE_SECRETS_DIR, SECRET_KEY_S3_ACCESS_KEY);
-            args.push(format!("-D{}=$(cat {})", EDC_IONOS_ACCESS_KEY, path));
+            java_cmd.push(format!("-D{}=$(cat {})", EDC_IONOS_ACCESS_KEY, path));
             let path = format!("{}/{}", STACKABLE_SECRETS_DIR, SECRET_KEY_S3_SECRET_KEY);
-            args.push(format!("-D{}=$(cat {})", EDC_IONOS_SECRET_KEY, path));
+            java_cmd.push(format!("-D{}=$(cat {})", EDC_IONOS_SECRET_KEY, path));
         }
     }
 
     // We add this at the and, as the .jar file should be the last argument to the call to the java binary
-    args.extend(vec!["-jar".to_string(), "connector.jar".to_string()]);
+    java_cmd.extend(vec!["-jar".to_string(), "connector.jar".to_string()]);
 
     // TODO if a custom container command is needed, add it here (.command)
     let container_edc = container_builder
-        .args(args.clone())
+        .command(vec!["/bin/bash".to_string(), "-c".to_string()])
+        .args(vec![format!("{}", java_cmd.join(" "))])
         .image_from_product_image(resolved_product_image)
         .add_volume_mount(STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_DIR)
         .add_volume_mount(STACKABLE_CERT_DIR_NAME, STACKABLE_CERT_DIR)
         .add_volume_mount(STACKABLE_LOG_DIR_NAME, STACKABLE_LOG_DIR)
         .add_container_port(HTTP_PORT_NAME, HTTP_PORT.into())
-        .add_container_port(CONTROL_PORT_NAME, CONTROL_PORT.into())
+        //.add_container_port(CONTROL_PORT_NAME, CONTROL_PORT.into())
         .add_container_port(MANAGEMENT_PORT_NAME, MANAGEMENT_PORT.into())
         .add_container_port(IDS_PORT_NAME, IDS_PORT.into())
-        .add_container_port(PROTOCOL_PORT_NAME, PROTOCOL_PORT.into())
-        .add_container_port(PUBLIC_PORT_NAME, PUBLIC_PORT.into())
+        //.add_container_port(PROTOCOL_PORT_NAME, PROTOCOL_PORT.into())
+        //.add_container_port(PUBLIC_PORT_NAME, PUBLIC_PORT.into())
         .resources(merged_config.resources.clone().into())
-        .command(vec!["/bin/bash".to_string(), "-c".to_string()])
-        .args(vec![args.join(" && ")])
         .readiness_probe(Probe {
             initial_delay_seconds: Some(10),
             period_seconds: Some(10),
-            failure_threshold: Some(5),
+            failure_threshold: Some(50),
             tcp_socket: Some(TCPSocketAction {
                 port: IntOrString::String(HTTP_PORT_NAME.to_string()),
                 ..TCPSocketAction::default()
@@ -600,6 +599,11 @@ fn build_server_rolegroup_statefulset(
             }),
             ..Probe::default()
         })
+        .add_env_var_from_secret(
+            "EDC_IONOS_TOKEN",
+            edc.spec.cluster_config.ionos.token_secret.to_owned(),
+            "EDC_IONOS_TOKEN",
+        )
         .build();
 
     pod_builder
@@ -638,7 +642,40 @@ fn build_server_rolegroup_statefulset(
             ..Default::default()
         })
         .affinity(&merged_config.affinity)
-        .service_account_name(sa_name);
+        .service_account_name(sa_name)
+        .security_context(
+            PodSecurityContextBuilder::new()
+                .run_as_user(1000)
+                .run_as_group(0)
+                .fs_group(1000)
+                .build(),
+        );
+
+    if let Some(ContainerLogConfig {
+        choice:
+            Some(ContainerLogConfigChoice::Custom(CustomContainerLogConfig {
+                custom: ConfigMapLogConfig { config_map },
+            })),
+    }) = merged_config.logging.containers.get(&Container::Connector)
+    {
+        pod_builder.add_volume(Volume {
+            name: STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME.to_string(),
+            config_map: Some(ConfigMapVolumeSource {
+                name: Some(config_map.into()),
+                ..ConfigMapVolumeSource::default()
+            }),
+            ..Volume::default()
+        });
+    } else {
+        pod_builder.add_volume(Volume {
+            name: STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME.to_string(),
+            config_map: Some(ConfigMapVolumeSource {
+                name: Some(rolegroup_ref.object_name()),
+                ..ConfigMapVolumeSource::default()
+            }),
+            ..Volume::default()
+        });
+    }
 
     if merged_config.logging.enable_vector_agent {
         pod_builder.add_container(product_logging::framework::vector_container(
@@ -739,12 +776,12 @@ fn service_ports() -> Vec<ServicePort> {
             protocol: Some("TCP".to_string()),
             ..ServicePort::default()
         },
-        ServicePort {
-            name: Some(CONTROL_PORT_NAME.to_string()),
-            port: CONTROL_PORT.into(),
-            protocol: Some("TCP".to_string()),
-            ..ServicePort::default()
-        },
+        // ServicePort {
+        //     name: Some(CONTROL_PORT_NAME.to_string()),
+        //     port: CONTROL_PORT.into(),
+        //     protocol: Some("TCP".to_string()),
+        //     ..ServicePort::default()
+        // },
         ServicePort {
             name: Some(MANAGEMENT_PORT_NAME.to_string()),
             port: MANAGEMENT_PORT.into(),
@@ -757,18 +794,18 @@ fn service_ports() -> Vec<ServicePort> {
             protocol: Some("TCP".to_string()),
             ..ServicePort::default()
         },
-        ServicePort {
-            name: Some(PROTOCOL_PORT_NAME.to_string()),
-            port: PROTOCOL_PORT.into(),
-            protocol: Some("TCP".to_string()),
-            ..ServicePort::default()
-        },
-        ServicePort {
-            name: Some(PUBLIC_PORT_NAME.to_string()),
-            port: PUBLIC_PORT.into(),
-            protocol: Some("TCP".to_string()),
-            ..ServicePort::default()
-        },
+        // ServicePort {
+        //     name: Some(PROTOCOL_PORT_NAME.to_string()),
+        //     port: PROTOCOL_PORT.into(),
+        //     protocol: Some("TCP".to_string()),
+        //     ..ServicePort::default()
+        // },
+        // ServicePort {
+        //     name: Some(PUBLIC_PORT_NAME.to_string()),
+        //     port: PUBLIC_PORT.into(),
+        //     protocol: Some("TCP".to_string()),
+        //     ..ServicePort::default()
+        // },
     ]
 }
 

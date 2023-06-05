@@ -83,7 +83,7 @@ pub fn extend_role_group_config_map(
 ) -> Result<()> {
     if let Some(ContainerLogConfig {
         choice: Some(ContainerLogConfigChoice::Automatic(log_config)),
-    }) = logging.containers.get(&Container::Edc)
+    }) = logging.containers.get(&Container::Connector)
     {
         cm_builder.add_data(
             EDC_CONNECTOR_JAVA_LOG_FILE,
