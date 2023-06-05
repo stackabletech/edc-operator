@@ -35,8 +35,6 @@ pub const STACKABLE_CERT_DIR: &str = "/stackable/cert";
 pub const STACKABLE_CERT_DIR_NAME: &str = "cert";
 pub const STACKABLE_LOG_DIR: &str = "/stackable/log";
 pub const STACKABLE_LOG_DIR_NAME: &str = "log";
-pub const STACKABLE_LOG_CONFIG_MOUNT_DIR: &str = "/stackable/mount/log-config";
-pub const STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME: &str = "log-config-mount";
 // config file names
 pub const CONFIG_PROPERTIES: &str = "config.properties";
 // secret keys
@@ -411,10 +409,7 @@ impl Configuration for ConnectorConfigFragment {
             );
             result.insert(
                 EDC_VAULT.to_owned(),
-                Some(format!(
-                    "{}/{}",
-                    STACKABLE_CERT_DIR, STACKABLE_CERT_VAULT
-                )),
+                Some(format!("{}/{}", STACKABLE_CERT_DIR, STACKABLE_CERT_VAULT)),
             );
             result.insert(
                 EDC_IONOS_ENDPOINT.to_owned(),

@@ -7,10 +7,8 @@ use crate::crd::{
     CONTROL_PORT, CONTROL_PORT_NAME, EDC_IONOS_ACCESS_KEY, EDC_IONOS_ENDPOINT,
     EDC_IONOS_SECRET_KEY, HTTP_PORT, HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME, MANAGEMENT_PORT,
     MANAGEMENT_PORT_NAME, PROTOCOL_PORT, PROTOCOL_PORT_NAME, PUBLIC_PORT, PUBLIC_PORT_NAME,
-    SECRET_KEY_S3_ACCESS_KEY, SECRET_KEY_S3_SECRET_KEY,
-    STACKABLE_CERT_DIR, STACKABLE_CERT_DIR_NAME, STACKABLE_CONFIG_DIR,
-    STACKABLE_CONFIG_DIR_NAME,
-    STACKABLE_LOG_DIR,
+    SECRET_KEY_S3_ACCESS_KEY, SECRET_KEY_S3_SECRET_KEY, STACKABLE_CERT_DIR,
+    STACKABLE_CERT_DIR_NAME, STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME, STACKABLE_LOG_DIR,
     STACKABLE_LOG_DIR_NAME, STACKABLE_SECRETS_DIR,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
@@ -144,7 +142,7 @@ pub enum Error {
         source: stackable_operator::error::Error,
     },
     #[snafu(display("failed to resolve and merge resource config for role and role group"))]
-    FailedToResolveResourceConfig { source: crate::crd::Error, },
+    FailedToResolveResourceConfig { source: crate::crd::Error },
     #[snafu(display("failed to create EDC container [{name}]"))]
     FailedToCreateEdcContainer {
         source: stackable_operator::error::Error,
@@ -538,7 +536,7 @@ fn build_server_rolegroup_statefulset(
         args.push(product_logging::framework::capture_shell_output(
             STACKABLE_LOG_DIR,
             "edc",
-            &log_config,
+            log_config,
         ));
     }
 
@@ -569,7 +567,7 @@ fn build_server_rolegroup_statefulset(
 
     // TODO if a custom container command is needed, add it here (.command)
     let container_edc = container_builder
-        .args(args)
+        .args(args.clone())
         .image_from_product_image(resolved_product_image)
         .add_volume_mount(STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_DIR)
         .add_volume_mount(STACKABLE_CERT_DIR_NAME, STACKABLE_CERT_DIR)
