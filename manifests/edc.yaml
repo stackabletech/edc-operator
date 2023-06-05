@@ -12,6 +12,15 @@ spec:
     listenerClass: external-unstable
     certSecret: connector-cert
     vectorAggregatorConfigMapName: vector-aggregator-discovery
+    s3:
+      inline:
+        bucketName: my-bucket
+        connection:
+          inline:
+            host: ionos.com # TODO
+            port: 443       # TODO
+            credentials:
+              secretClass: s3-credentials-class
   connectors:
     config:
       logging:

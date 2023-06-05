@@ -12,6 +12,7 @@ use stackable_operator::{
             CpuLimitsFragment, MemoryLimitsFragment, NoRuntimeLimits, NoRuntimeLimitsFragment,
             PvcConfig, PvcConfigFragment, Resources, ResourcesFragment,
         },
+        s3,
     },
     config::{fragment, fragment::Fragment, fragment::ValidationError, merge::Merge},
     k8s_openapi::apimachinery::pkg::api::resource::Quantity,
@@ -27,12 +28,15 @@ use strum::{Display, EnumIter};
 
 pub const APP_NAME: &str = "edc";
 // directories
+pub const STACKABLE_SECRETS_DIR: &str = "/stackable/secrets";
 pub const STACKABLE_CONFIG_DIR: &str = "/stackable/config";
 pub const STACKABLE_CONFIG_DIR_NAME: &str = "config";
 pub const STACKABLE_CERT_DIR: &str = "/stackable/cert";
 pub const STACKABLE_CERT_DIR_NAME: &str = "cert";
 pub const STACKABLE_LOG_DIR: &str = "/stackable/log";
 pub const STACKABLE_LOG_DIR_NAME: &str = "log";
+pub const STACKABLE_LOG_CONFIG_MOUNT_DIR: &str = "/stackable/mount/log-config";
+pub const STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME: &str = "log-config-mount";
 // config file names
 pub const CONFIG_PROPERTIES: &str = "config.properties";
 // secret keys
@@ -71,6 +75,9 @@ pub const EDC_VAULT_HASHICORP_TIMEOUT_SECONDS: &str = "edc.vault.hashicorp.timeo
 pub const EDC_IONOS_ACCESS_KEY: &str = "edc.ionos.access.key";
 pub const EDC_IONOS_SECRET_KEY: &str = "edc.ionos.secret.key";
 pub const EDC_IONOS_ENDPOINT: &str = "edc.ionos.endpoints";
+// S3
+pub const SECRET_KEY_S3_ACCESS_KEY: &str = "accessKey";
+pub const SECRET_KEY_S3_SECRET_KEY: &str = "secretKey";
 // default ports
 pub const HTTP_PORT_NAME: &str = "http";
 pub const HTTP_PORT: u16 = 19191;
@@ -146,6 +153,8 @@ pub struct EDCClusterConfig {
     pub listener_class: CurrentlySupportedListenerClasses,
 
     pub cert_secret: String,
+
+    pub s3: s3::S3BucketDef,
 }
 
 // TODO: Temporary solution until listener-operator is finished
@@ -402,12 +411,11 @@ impl Configuration for ConnectorConfigFragment {
             );
             result.insert(
                 EDC_VAULT.to_owned(),
-                Some(format!("{}/{}", STACKABLE_CERT_DIR, STACKABLE_CERT_VAULT)),
+                Some(format!(
+                    "{}/{}",
+                    STACKABLE_CERT_DIR, STACKABLE_CERT_VAULT
+                )),
             );
-
-            // TODO IONOS access key and secret key are from the ENV
-            result.insert(EDC_IONOS_ACCESS_KEY.to_owned(), Some("TODO".to_owned()));
-            result.insert(EDC_IONOS_SECRET_KEY.to_owned(), Some("TODO".to_owned()));
             result.insert(
                 EDC_IONOS_ENDPOINT.to_owned(),
                 Some("s3-eu-central-1.ionoscloud.com".to_owned()),
