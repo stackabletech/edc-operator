@@ -27,7 +27,7 @@ spec:
       logging:
         enableVectorAgent: true
         containers:
-          edc:
+          connector:
             console:
               level: INFO
             file:
