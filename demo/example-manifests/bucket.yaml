@@ -1,0 +1,13 @@
+---
+apiVersion: s3.stackable.tech/v1alpha1
+kind: S3Bucket
+metadata:
+  name: my-bucket-resource
+spec:
+  bucketName: my-example-bucket
+  connection:
+    inline: 
+      host: ionos.com # TODO
+      port: 443       # TODO
+      credentials:
+        secretClass: s3-credentials-class

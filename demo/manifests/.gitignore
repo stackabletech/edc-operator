@@ -1,0 +1,4 @@
+s3-secret.yaml
+ionos-token.yaml
+source-bucket.yaml
+destination-bucket.yaml
