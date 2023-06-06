@@ -4,8 +4,8 @@ directory manually.
 
 The following files are ok to edit:
 
-- helm/hello-world-operator/templates/roles.yaml
-- helm/hello-world-operator/values.yaml
+- helm/edc-operator/templates/roles.yaml
+- helm/edc-operator/values.yaml
 
 The details are in-motion but check this repository for a few details:
 <https://github.com/stackabletech/operator-templating>
