@@ -1,20 +1,5 @@
-This is a an example Kubernetes operator that runs a simple nginx instance. It serves as documentation of how a Stackable Operator works and it can also be a good starting point for building a new Operator.
+This is a Kubernetes Operator for the [EDC Connector](https://github.com/eclipse-edc/Connector). It is built with the [IONOS S3 extension](https://github.com/Digital-Ecosystems/edc-ionos-s3).
 
-Unlike the other stackable Operators, this one is not installable with Helm or stackablectl, as it is only for educational purposes.
+A demo can be run from the `demo` directory, follow the README file in that directory for more information.
 
-... TODO Steps to get it to run etc.
-
-
-Apply the CRD
-
-    cargo run -- crd | kubectl apply -f -
-
-Deploy the HelloCluster:
-
-    kubectl apply -f hello.yaml && cargo run -- run
-
-Connect:
-
-    kubectl port-forward svc/hello-world 8080
-
-reachable at localhost:8080
+The `jar` file that the Operator runs is built from the `edc-connector` repository.

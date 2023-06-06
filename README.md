@@ -2,35 +2,13 @@
   <img width="150" src="./.readme/static/borrowed/Icon_Stackable.svg" alt="Stackable Logo"/>
 </p>
 
-<h1 align="center">Stackable Demo Operator - Hello World!</h1>
+<h1 align="center">Stackable EDC Operator</h1>
 
-![Build Actions Status](https://ci.stackable.tech/buildStatus/icon?job=hello-world%2doperator%2dit%2dnightly&subject=Integration%20Tests)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/stackabletech/hello-world-operator/graphs/commit-activity)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-green.svg)](https://docs.stackable.tech/home/stable/contributor/index.html)
-[![License OSL3.0](https://img.shields.io/badge/license-OSL3.0-green)](./LICENSE)
+This is a Kubernetes Operator for the [EDC Connector](https://github.com/eclipse-edc/Connector). It is built with the [IONOS S3 extension](https://github.com/Digital-Ecosystems/edc-ionos-s3).
 
-[Documentation](https://docs.stackable.tech/hello-world/stable/index.html) | [Stackable Data Platform](https://stackable.tech/) | [Platform Docs](https://docs.stackable.tech/) | [Discussions](https://github.com/orgs/stackabletech/discussions) | [Discord](https://discord.gg/7kZ3BNnCAF)
+A demo can be run from the `demo` directory, follow the README file in that directory for more information.
 
-This is a an example Kubernetes operator that runs a simple nginx instance. It serves as documentation of how a Stackable Operator works and it can also be a good starting point for building a new Operator.
-
-Unlike the other stackable Operators, this one is not installable with Helm or stackablectl, as it is only for educational purposes.
-
-... TODO Steps to get it to run etc.
-
-
-Apply the CRD
-
-    cargo run -- crd | kubectl apply -f -
-
-Deploy the HelloCluster:
-
-    kubectl apply -f hello.yaml && cargo run -- run
-
-Connect:
-
-    kubectl port-forward svc/hello-world 8080
-
-reachable at localhost:8080
+The `jar` file that the Operator runs is built from the `edc-connector` repository.
 
 
 ## About The Stackable Data Platform
