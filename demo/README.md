@@ -7,13 +7,11 @@ This demo starts two operators (_provider_ and _consumer_) and executes a data t
 
 What you need to do beforehand
 
-- setup the buckets (two buckets, one with the demo file)
+- Set up two buckets in the IONOS DCD. One as a data source and one as a destination. Put the `device1-data.csv` file in the source bucket.
+- Get an IONOS API token and IONOS S3 credentials (access key, secret key).
+- Start a kind cluster.
 
-- get an ionos API token and S3 credentials (access key, secret key)
-- a running kind cluster
-
-run `make secret-manifests` and put in your ionos token and s3 credentials. This will create two files `ionos-token.yaml` and `s3-secret.yaml`.
-
+Have the bucket names, the token and s3 credentials ready.
 ## Running
 
 First, run `make start`. This will:
@@ -24,7 +22,9 @@ First, run `make start`. This will:
 - Install the manifests
 - Run the Operator once to start the EDCs
 
-Then, your cluster contains all the software needed to actually make the API calls and do the exchange.
+Along the way you will need to provide the information from the setup step. This will generate files, so you will not need to provide the information again when you start the demo again. To remove the generated files, call `make clean`.
+
+Your cluster now contains all the software needed to actually make the API calls and do the exchange.
 
 Next you can run `make file-exchange` to do the actually exchange. That script will:
 
