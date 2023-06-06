@@ -12,15 +12,8 @@ spec:
     certSecret: connector-cert
     ionos:
       tokenSecret: ionos-token
-      s3:
-        inline:
-          bucketName: source-bucket
-          connection:
-            inline:
-              host: ionos.com # TODO
-              port: 443       # TODO
-              credentials:
-                secretClass: s3-credentials-class
+      s3: 
+        reference: source-bucket
   connectors:
     roleGroups:
       default:
@@ -40,15 +33,7 @@ spec:
     ionos:
       tokenSecret: ionos-token
       s3:
-        inline:
-          bucketName: destination-bucket
-          connection:
-            inline:
-              host: ionos.com # TODO
-              port: 443       # TODO
-              credentials:
-                secretClass: s3-credentials-class
-
+        reference: destination-bucket
   connectors:
     roleGroups:
       default:
