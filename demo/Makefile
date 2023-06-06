@@ -26,9 +26,10 @@ dependencies:
 
 consumer-vault:
 	helm install \
+	--repo https://helm.releases.hashicorp.com \
     --set server.dev.enabled=true \
     --set server.dev.devRootToken=dev-token \
-    consumer-vault hashicorp/vault
+    consumer-vault vault
 
 cert-secret:
 	kubectl delete secret connector-cert --ignore-not-found
