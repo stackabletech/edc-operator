@@ -1,3 +1,6 @@
+# Set the DEMO_LOGGING environment variable to install logging
+
+
 kind-load:
 	kind load docker-image docker.stackable.tech/sandbox/edc:77c6e17-stackable0.0.0-dev
 
@@ -18,11 +21,10 @@ manifests/s3-secret.yaml:
 	read -rp 'Enter your IONOS S3 secret key: ' SECRET_KEY && export SECRET_KEY && \
 	yq '.stringData.accessKey = env(ACCESS_KEY) | .stringData.secretKey = env(SECRET_KEY)' example-manifests/s3-secret.yaml > manifests/s3-secret.yaml
 
-dependencies-logging:
-	stackablectl stack install logging
-
 dependencies:
-	stackablectl operator install commons secret
+	if [ -z "$(DEMO_LOGGING)" ]; \
+	then stackablectl operator install commons secret; \
+	else stackablectl stack install logging; fi
 
 consumer-vault:
 	helm install \
@@ -31,39 +33,42 @@ consumer-vault:
     --set server.dev.devRootToken=dev-token \
     consumer-vault vault
 
+install-operator:
+	helm install --devel --repo https://repo.stackable.tech/repository/helm-dev/ edc-operator edc-operator
+
 cert-secret:
 	kubectl delete secret connector-cert --ignore-not-found
 	kubectl create secret generic connector-cert \
 	--from-file=resources/cert.pfx \
 	--from-file=resources/vault.properties
 
-apply-crd:
-	(cd .. && cargo run -- crd | kubectl apply -f -)
-
-apply-deps: cert-secret manifests/source-bucket.yaml manifests/destination-bucket.yaml manifests/s3-secret.yaml manifests/ionos-token.yaml
+apply: cert-secret manifests/source-bucket.yaml manifests/destination-bucket.yaml manifests/s3-secret.yaml manifests/ionos-token.yaml
 	kubectl apply -f manifests/s3-credentials-class.yaml
 	kubectl apply -f manifests/s3-secret.yaml
 	kubectl apply -f manifests/ionos-token.yaml
 	kubectl apply -f manifests/source-bucket.yaml
 	kubectl apply -f manifests/destination-bucket.yaml
+	if [ -z "$(DEMO_LOGGING)" ]; then kubectl apply -f manifests/demo.yaml; else kubectl apply -f manifests/demo-logging.yaml; fi
 
-apply-demo: apply-crd apply-deps
-	kubectl apply -f manifests/demo.yaml
+### FOR DEVELOPMENT
 
-apply-demo-logging: apply-crd apply-deps
-	kubectl apply -f manifests/demo-logging.yaml
+apply-crd:
+	(cd .. && cargo run -- crd | kubectl apply -f -)
 
 run:
 	(cd .. && timeout --preserve-status 10s cargo run -- run)
 
-start: dependencies consumer-vault apply-demo run
+### MAIN STUFF
 
-start-with-logging: dependencies-logging consumer-vault apply-demo-logging run
+start-dev: dependencies consumer-vault apply-crd apply run
+
+start: dependencies consumer-vault install-operator apply
 
 # The file exchange needs these two files, because the bucket names are read from them
 file-exchange: manifests/source-bucket.yaml manifests/destination-bucket.yaml
 	bash fileExchange.sh
 
+# removes all generated files
 clean:
 	rm manifests/ionos-token.yaml
 	rm manifests/s3-secret.yaml
