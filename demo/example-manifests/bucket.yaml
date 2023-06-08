@@ -7,7 +7,12 @@ spec:
   bucketName: my-example-bucket
   connection:
     inline: 
-      host: ionos.com # TODO
-      port: 443       # TODO
+      host: s3-eu-central-1.ionoscloud.com
+      port: 443
+      tls:
+        verification:
+          server:
+            caCert:
+              webPki: {}
       credentials:
         secretClass: s3-credentials-class

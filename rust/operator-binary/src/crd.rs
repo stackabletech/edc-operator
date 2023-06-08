@@ -424,16 +424,6 @@ impl Configuration for ConnectorConfigFragment {
                     STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_VAULT
                 )),
             );
-
-            result.insert(
-                EDC_IONOS_ENDPOINT.to_owned(),
-                Some("s3-eu-central-1.ionoscloud.com".to_owned()),
-            );
-            // TODO the token should be read from a secret
-            // result.insert(
-            //     EDC_IONOS_TOKEN.to_owned(),
-            //     Some("....".to_owned()),
-            // );
         }
 
         Ok(result)
