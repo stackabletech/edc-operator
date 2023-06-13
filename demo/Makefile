@@ -27,8 +27,8 @@ dependencies:
 	then stackablectl operator install commons secret; \
 	else stackablectl stack install logging; fi
 
-# Maybe echo the steps on the console
 consumer-vault:
+	echo "Installing Hashicorp Vault"
 	helm install \
 	--repo https://helm.releases.hashicorp.com \
     --set server.dev.enabled=true \
