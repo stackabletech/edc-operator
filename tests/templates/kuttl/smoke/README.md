@@ -1,4 +1,6 @@
-This test requires:
-- the EDC Operator
+# Smoke Test
+
+This test requires the following operators:
+- edc
 - commons
 - secret
