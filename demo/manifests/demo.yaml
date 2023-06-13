@@ -12,7 +12,7 @@ spec:
     certSecret: connector-cert
     ionos:
       tokenSecret: ionos-token
-      s3: 
+      s3:
         reference: source-bucket
   connectors:
     roleGroups:

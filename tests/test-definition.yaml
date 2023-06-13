@@ -1,0 +1,9 @@
+---
+dimensions:
+  - name: edc
+    values:
+      - 77c6e17-stackable0.0.0-dev
+tests:
+  - name: smoke
+    dimensions:
+      - edc
