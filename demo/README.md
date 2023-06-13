@@ -8,7 +8,7 @@ In this demo, the EDC operator is used to set up two EDC instances (_provider_ a
 What you need to do beforehand
 
 - Access to a Kubernetes cluster. We will use `kind` for this demo.
-- The `stackablectl` and `helm` command line tools for installing the Stackable Platform Oerators. 
+- The `stackablectl` and `helm` command line tools for installing the Stackable Platform Oerators.
 - The `ionosctl` command line tool and an IONOS DCD account.
 - Two S3 buckets in the IONOS DCD. One as a data source and one as a destination. Put the `device1-data.csv` file in the source bucket.
 - An IONOS API token. Use the `ionosctl token generate` to generate one.
