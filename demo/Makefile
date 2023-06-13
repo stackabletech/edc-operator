@@ -21,20 +21,23 @@ manifests/s3-secret.yaml:
 	read -rp 'Enter your IONOS S3 secret key: ' SECRET_KEY && export SECRET_KEY && \
 	yq '.stringData.accessKey = env(ACCESS_KEY) | .stringData.secretKey = env(SECRET_KEY)' example-manifests/s3-secret.yaml > manifests/s3-secret.yaml
 
+# Maybe we should pin down the versions of these dependencies
 dependencies:
 	if [ -z "$(DEMO_LOGGING)" ]; \
 	then stackablectl operator install commons secret; \
 	else stackablectl stack install logging; fi
 
+# Maybe echo the steps on the console
 consumer-vault:
 	helm install \
 	--repo https://helm.releases.hashicorp.com \
     --set server.dev.enabled=true \
     --set server.dev.devRootToken=dev-token \
+    --wait \
     consumer-vault vault
 
 install-operator:
-	helm install --devel --repo https://repo.stackable.tech/repository/helm-dev/ edc-operator edc-operator
+	helm install --wait --devel --repo https://repo.stackable.tech/repository/helm-dev/ edc-operator edc-operator
 
 cert-secret:
 	kubectl delete secret connector-cert --ignore-not-found

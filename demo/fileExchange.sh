@@ -177,4 +177,5 @@ curl -X POST "http://$CONSUMER_IP:$CONSUMER_PORT/api/v1/data/transferprocess" \
 }
 EOF
 
+# Maybe echo something like: Transfer completed from <source> to <dest>
 echo ""

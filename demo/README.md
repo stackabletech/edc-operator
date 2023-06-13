@@ -1,17 +1,22 @@
 
 # EDC Demo
 
-This demo starts two operators (_provider_ and _consumer_) and executes a data transfer from one IONOS S3 bucket to another.
+In this demo, the EDC operator is used to set up two EDC instances (_provider_ and _consumer_) with IONOS S3 buckets as storage. Then a file transfer between the two connectors is performed.
 
 ## Setup
 
 What you need to do beforehand
 
-- Set up two buckets in the IONOS DCD. One as a data source and one as a destination. Put the `device1-data.csv` file in the source bucket.
-- Get an IONOS API token and IONOS S3 credentials (access key, secret key).
+- Access to a Kubernetes cluster. We will use `kind` for this demo.
+- The `stackablectl` and `helm` command line tools for installing the Stackable Platform Oerators. 
+- The `ionosctl` command line tool and an IONOS DCD account.
+- Two S3 buckets in the IONOS DCD. One as a data source and one as a destination. Put the `device1-data.csv` file in the source bucket.
+- An IONOS API token. Use the `ionosctl token generate` to generate one.
+- IONOS S3 credentials (access key, secret key). Use `ionosctl user s3key get --user-id <your-user-id> --s3key-id <key-id> -o json` to obtain the secret key of existing S3 credentials.
 - Start a kind cluster.
 
 Have the bucket names, the token and s3 credentials ready.
+
 ## Running
 
 First, run `make start`. This will:
