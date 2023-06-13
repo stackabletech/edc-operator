@@ -1,0 +1,11 @@
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: >-
+      helm install
+      --repo https://helm.releases.hashicorp.com
+      --set server.dev.enabled=true
+      --set server.dev.devRootToken=dev-token
+      --namespace $NAMESPACE
+      consumer-vault vault

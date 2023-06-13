@@ -1,0 +1,9 @@
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: >-
+      kubectl create secret generic connector-cert
+      --namespace $NAMESPACE
+      --from-file=resources/cert.pfx
+      --from-file=resources/vault.properties

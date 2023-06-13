@@ -1,0 +1,71 @@
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: install-edc
+timeout: 300
+---
+apiVersion: edc.stackable.tech/v1alpha1
+kind: EDCCluster
+metadata:
+  name: consumer
+spec:
+  image:
+    custom: docker.stackable.tech/sandbox/edc:77c6e17-stackable0.0.0-dev
+    productVersion: 0.0.1
+  clusterConfig:
+    listenerClass: external-unstable
+    certSecret: connector-cert
+    ionos:
+      tokenSecret: ionos-token
+      s3:
+        reference: destination-bucket
+  connectors:
+    roleGroups:
+      default:
+        replicas: 1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ionos-token
+stringData:
+  EDC_IONOS_TOKEN: AValidTokenShouldGoHere
+---
+apiVersion: secrets.stackable.tech/v1alpha1
+kind: SecretClass
+metadata:
+  name: s3-credentials-class
+spec:
+  backend:
+    k8sSearch:
+      searchNamespace:
+        pod: {}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: s3-credentials
+  labels:
+    secrets.stackable.tech/class: s3-credentials-class
+stringData:
+  accessKey: accessKeyHere
+  secretKey: secretKeyHereThatBelongsToTheAccesskey
+---
+apiVersion: s3.stackable.tech/v1alpha1
+kind: S3Bucket
+metadata:
+  name: destination-bucket
+spec:
+  bucketName: destination-bucket
+  connection:
+    inline:
+      host: s3-eu-central-1.ionoscloud.com
+      port: 443
+      tls:
+        verification:
+          server:
+            caCert:
+              webPki: {}
+      credentials:
+        secretClass: s3-credentials-class

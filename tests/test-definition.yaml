@@ -1,0 +1,8 @@
+dimensions:
+  - name: edc
+    values:
+      - a
+tests:
+  - name: smoke
+    dimensions:
+      - edc
