@@ -2,7 +2,7 @@
 dimensions:
   - name: edc
     values:
-      - a  # value not used
+      - 77c6e17-stackable0.0.0-dev
 tests:
   - name: smoke
     dimensions:

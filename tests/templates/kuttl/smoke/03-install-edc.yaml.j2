@@ -11,7 +11,7 @@ metadata:
   name: consumer
 spec:
   image:
-    custom: docker.stackable.tech/sandbox/edc:77c6e17-stackable0.0.0-dev
+    custom: docker.stackable.tech/sandbox/edc:{{ test_scenario['values']['edc']}}
     productVersion: 0.0.1
   clusterConfig:
     listenerClass: external-unstable
