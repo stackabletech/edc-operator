@@ -2,11 +2,14 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
-  # Note: HashiCorp installs a ClusterRole that doesn't automatically get deleted
+  # The authDelegator and injector are disabled to prevent the creation of
+  # cluster scoped resources.
   - script: >-
       helm install
       --repo https://helm.releases.hashicorp.com
       --set server.dev.enabled=true
       --set server.dev.devRootToken=dev-token
+      --set injector.enabled=false
+      --set server.authDelegator.enabled=false
       --namespace $NAMESPACE
       consumer-vault vault
