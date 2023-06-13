@@ -1,7 +1,8 @@
+---
 dimensions:
   - name: edc
     values:
-      - a
+      - a  # value not used
 tests:
   - name: smoke
     dimensions:

@@ -2,6 +2,7 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
+  # Note: HashiCorp installs a ClusterRole that doesn't automatically get deleted
   - script: >-
       helm install
       --repo https://helm.releases.hashicorp.com
