@@ -23,18 +23,20 @@ manifests/s3-secret.yaml:
 
 dependencies:
 	if [ -z "$(DEMO_LOGGING)" ]; \
-	then stackablectl operator install commons secret; \
+	then stackablectl operator install commons=23.4.1 secret=23.4.1 ; \
 	else stackablectl stack install logging; fi
 
 consumer-vault:
+	echo "Installing Hashicorp Vault"
 	helm install \
 	--repo https://helm.releases.hashicorp.com \
     --set server.dev.enabled=true \
     --set server.dev.devRootToken=dev-token \
+    --wait \
     consumer-vault vault
 
 install-operator:
-	helm install --devel --repo https://repo.stackable.tech/repository/helm-dev/ edc-operator edc-operator
+	helm install --wait --devel --repo https://repo.stackable.tech/repository/helm-dev/ edc-operator edc-operator
 
 cert-secret:
 	kubectl delete secret connector-cert --ignore-not-found
