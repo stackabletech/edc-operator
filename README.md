@@ -4,7 +4,7 @@
 
 <h1 align="center">Stackable Operator for Eclipse EDC</h1>
 
-This is a Kubernetes Operator for the [EDC Connector](https://github.com/eclipse-edc/Connector) (Eclipse Dataspace Components Connector). 
+This is a Kubernetes Operator for the [EDC Connector](https://github.com/eclipse-edc/Connector) (Eclipse Dataspace Components Connector).
 It is built with the [IONOS S3 extension](https://github.com/Digital-Ecosystems/edc-ionos-s3).
 
 A demo can be run from the `demo` directory, follow the README file in that directory for more information.
