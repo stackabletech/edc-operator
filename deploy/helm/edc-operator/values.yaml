@@ -30,7 +30,7 @@ securityContext: {}
   # runAsNonRoot: true
   # runAsUser: 1000
 
-resources: {}
+resources:
   limits:
     cpu: 100m
     memory: 128Mi
