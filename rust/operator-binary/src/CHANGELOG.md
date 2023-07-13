@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- Operator-rs: `0.41.0` -> `0.44.0` ([#xxx]).
-- Increase the size limit of the log volumes ([#xxx])
+- Operator-rs: `0.41.0` -> `0.44.0` ([#20]).
+- Increase the size limit of the log volumes ([#20])
 
-[#xxx]: https://github.com/stackabletech/hdfs-operator/pull/xxx
+[#20]: https://github.com/stackabletech/hdfs-operator/pull/20
