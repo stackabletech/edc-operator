@@ -1,7 +1,7 @@
-use crate::controller::MAX_LOG_FILES_SIZE_IN_MIB;
-
+use crate::controller::MAX_LOG_FILES_SIZE;
 use crate::crd::{Container, EDCCluster, EDC_CONNECTOR_JAVA_LOG_FILE, STACKABLE_LOG_DIR};
 use snafu::{OptionExt, ResultExt, Snafu};
+use stackable_operator::memory::BinaryMultiple;
 use stackable_operator::product_logging::spec::{AutomaticContainerLogConfig, LogLevel};
 use stackable_operator::{
     builder::ConfigMapBuilder,
@@ -90,7 +90,10 @@ pub fn extend_role_group_config_map(
             create_java_logging_config(
                 &format!("{STACKABLE_LOG_DIR}/edc"),
                 EDC_CONNECTOR_JAVA_LOG_FILE,
-                MAX_LOG_FILES_SIZE_IN_MIB,
+                MAX_LOG_FILES_SIZE
+                    .scale_to(BinaryMultiple::Mebi)
+                    .floor()
+                    .value as u32,
                 CONSOLE_CONVERSION_PATTERN,
                 log_config,
             ),
