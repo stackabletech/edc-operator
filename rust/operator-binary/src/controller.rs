@@ -197,8 +197,10 @@ impl ReconcilerError for Error {
 pub async fn reconcile_edc(edc: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action> {
     tracing::info!("Starting reconcile");
     let client = &ctx.client;
-    let resolved_product_image: ResolvedProductImage =
-        edc.spec.image.resolve(DOCKER_IMAGE_BASE_NAME);
+    let resolved_product_image: ResolvedProductImage = edc
+        .spec
+        .image
+        .resolve(DOCKER_IMAGE_BASE_NAME, crate::built_info::CARGO_PKG_VERSION);
 
     let s3_bucket_spec = edc
         .spec
