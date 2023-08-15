@@ -16,10 +16,12 @@ package com.ionos.edc.dataplane.ionos.s3;
 
 import com.ionos.edc.extension.s3.api.S3ConnectorApi;
 import org.eclipse.edc.connector.dataplane.spi.pipeline.DataSource;
-
+import org.eclipse.edc.connector.dataplane.spi.pipeline.StreamResult;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.stream.Stream;
+
+import static org.eclipse.edc.connector.dataplane.spi.pipeline.StreamResult.success;
 
 class IonosDataSource implements DataSource {
 
@@ -28,13 +30,14 @@ class IonosDataSource implements DataSource {
     private String blobName;
     private S3ConnectorApi s3Api;
 
+    
     private IonosDataSource() {
         
     }
 
     @Override
-    public Stream<Part> openPartStream() {
-        return Stream.of(new S3Part(s3Api, keyName, bucketName, blobName));
+    public StreamResult<Stream<Part>> openPartStream() {
+        return success(Stream.of(new S3Part(s3Api, keyName, bucketName, blobName)));
     }
 
     private static class S3Part implements Part {

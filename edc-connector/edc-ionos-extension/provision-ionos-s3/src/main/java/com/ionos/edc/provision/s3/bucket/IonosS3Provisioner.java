@@ -23,13 +23,14 @@ import org.eclipse.edc.connector.transfer.spi.types.DeprovisionedResource;
 import org.eclipse.edc.connector.transfer.spi.types.ProvisionResponse;
 import org.eclipse.edc.connector.transfer.spi.types.ProvisionedResource;
 import org.eclipse.edc.connector.transfer.spi.types.ResourceDefinition;
+import org.eclipse.edc.spi.response.ResponseStatus;
 import org.eclipse.edc.spi.monitor.Monitor;
 import org.eclipse.edc.spi.response.StatusResult;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.OffsetDateTime;
 import java.util.concurrent.CompletableFuture;
-
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static dev.failsafe.Failsafe.with;
 
 public class IonosS3Provisioner implements Provisioner<IonosS3ResourceDefinition, IonosS3ProvisionedResource> {
@@ -66,15 +67,16 @@ public class IonosS3Provisioner implements Provisioner<IonosS3ResourceDefinition
         if (storage == null) {
             storage = "storage";       
         }
-        return with(retryPolicy).getAsync(() -> s3Api.bucketExists(bucketName))
-        		.thenCompose(exists -> {
-                    if (exists) {
-                        return getExistBucket(bucketName);
-                    } else {
-                        return createBucket(bucketName);
+
+
+                    if (!s3Api.bucketExists(bucketName)) {
+                        
+                        createBucket(bucketName);
+                    }else{
+                        return completedFuture(StatusResult.failure(ResponseStatus.FATAL_ERROR, "Bucket:"+ bucketName+" exists"));
                     }
-                })
-                .thenApply(writeOnlySas -> {
+
+                    
                     // Ensure resource name is unique to avoid key collisions in local and remote vaults
                 	String resourceName = resourceDefinition.getId() + "-container";
                 	var serviceAccount =s3Api.createTemporaryKey();
@@ -86,12 +88,11 @@ public class IonosS3Provisioner implements Provisioner<IonosS3ResourceDefinition
                              .keyId(serviceAccount.getAccessKey())
                              .transferProcessId(resourceDefinition.getTransferProcessId()).resourceName(resourceName).hasToken(true)
                              .build();
-
                 	var secretToken = new IonosToken(serviceAccount.getAccessKey(), serviceAccount.getSecretKey(), expiryTime.toInstant().toEpochMilli() );
                     var response = ProvisionResponse.Builder.newInstance().resource(resource).secretToken(secretToken).build();
                    
-                    return StatusResult.success(response);
-                });
+                  return CompletableFuture.completedFuture(StatusResult.success(response));
+               
     
     }
 
@@ -106,7 +107,10 @@ public class IonosS3Provisioner implements Provisioner<IonosS3ResourceDefinition
     
     @NotNull
     private CompletableFuture<Void> getExistBucket(String bucketName) {
-        return CompletableFuture.completedFuture(null);
+        return with(retryPolicy)
+                .runAsync(() -> {
+                    s3Api.bucketExists(bucketName);
+                });
     }
     
     @NotNull

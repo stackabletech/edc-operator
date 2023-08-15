@@ -42,14 +42,16 @@ val fraunhoferVersion: String by project
 
 
 dependencies {
-
+	implementation("${edcGroup}:boot:${edcVersion}")
+	
     implementation("${edcGroup}:control-plane-core:${edcVersion}")
 	
 	implementation("${edcGroup}:api-observability:${edcVersion}")
 	
 	implementation("${edcGroup}:configuration-filesystem:${edcVersion}")
 
-	implementation("${edcGroup}:http:${edcVersion}")	
+	implementation("${edcGroup}:http:${edcVersion}")
+	implementation("${edcGroup}:dsp:${edcVersion}")	
 	
 	implementation("${edcGroup}:auth-tokenbased:${edcVersion}")	
 
@@ -69,9 +71,9 @@ dependencies {
 	implementation("${edcGroup}:vault-hashicorp:${edcVersion}")
 	
 	implementation("${edcGroup}:data-plane-client:${edcVersion}")
-
+	
 	implementation("${edcGroup}:transfer-data-plane:${edcVersion}")
-
+	
 	//Ionos Extension 
 	implementation(project(":edc-ionos-extension:provision-ionos-s3"))
 	
@@ -79,12 +81,10 @@ dependencies {
  
 	testImplementation ("${edcGroup}:junit:${edcVersion}")	
 	
-	implementation("$edcGroup:ids:$edcVersion")
+	
 	
 	implementation("de.fraunhofer.iais.eis.ids.infomodel:java:${fraunhoferVersion}")
 
-	//Logging
-	implementation("${edcGroup}:monitor-jdk-logger:${edcVersion}")
 }
 
 repositories {
