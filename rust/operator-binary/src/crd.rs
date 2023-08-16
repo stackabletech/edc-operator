@@ -41,6 +41,7 @@ pub const STACKABLE_CERTS_DIR: &str = "/stackable/certificates";
 // config file names
 pub const CONFIG_PROPERTIES: &str = "config.properties";
 pub const LOGGING_PROPERTIES: &str = "logging.properties";
+pub const JVM_SECURITY_PROPERTIES: &str = "security.properties";
 // secret keys
 pub const STACKABLE_CERT_MOUNT_KEYSTORE: &str = "cert.pfx";
 pub const STACKABLE_CERT_MOUNT_VAULT: &str = "vault.properties";

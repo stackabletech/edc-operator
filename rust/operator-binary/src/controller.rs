@@ -5,11 +5,12 @@ use crate::OPERATOR_NAME;
 use crate::crd::{
     ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, CONFIG_PROPERTIES,
     EDC_FS_CONFIG, EDC_IONOS_ACCESS_KEY, EDC_IONOS_ENDPOINT, EDC_IONOS_SECRET_KEY, HTTP_PORT,
-    HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME, LOGGING_PROPERTIES, MANAGEMENT_PORT,
-    MANAGEMENT_PORT_NAME, SECRET_KEY_S3_ACCESS_KEY, SECRET_KEY_S3_SECRET_KEY, STACKABLE_CERTS_DIR,
-    STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CONFIG_DIR,
-    STACKABLE_CONFIG_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME,
-    STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME, STACKABLE_SECRETS_DIR,
+    HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME, JVM_SECURITY_PROPERTIES, LOGGING_PROPERTIES,
+    MANAGEMENT_PORT, MANAGEMENT_PORT_NAME, SECRET_KEY_S3_ACCESS_KEY, SECRET_KEY_S3_SECRET_KEY,
+    STACKABLE_CERTS_DIR, STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME,
+    STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR,
+    STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME,
+    STACKABLE_SECRETS_DIR,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
 use stackable_operator::builder::resources::ResourceRequirementsBuilder;
@@ -185,6 +186,14 @@ pub enum Error {
         "Druid does not support skipping the verification of the tls enabled S3 server"
     ))]
     S3TlsNoVerificationNotSupported,
+    #[snafu(display(
+        "failed to serialize [{JVM_SECURITY_PROPERTIES}] for group {}",
+        rolegroup
+    ))]
+    JvmSecurityProperties {
+        source: stackable_operator::product_config::writer::PropertiesWriterError,
+        rolegroup: String,
+    },
 }
 type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -222,6 +231,7 @@ pub async fn reconcile_edc(edc: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action
                         PropertyNameKind::Env,
                         PropertyNameKind::Cli,
                         PropertyNameKind::File(CONFIG_PROPERTIES.to_string()),
+                        PropertyNameKind::File(JVM_SECURITY_PROPERTIES.to_string()),
                     ],
                     edc.spec.connectors.clone().context(NoServerRoleSnafu)?,
                 ),
@@ -420,6 +430,15 @@ fn build_connector_rolegroup_config_map(
         }
     }
 
+    // build JVM security properties from configOverrides.
+    let jvm_sec_props: BTreeMap<String, Option<String>> = role_group_config
+        .get(&PropertyNameKind::File(JVM_SECURITY_PROPERTIES.to_string()))
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(k, v)| (k, Some(v)))
+        .collect();
+
     let mut cm_builder = ConfigMapBuilder::new();
 
     cm_builder
@@ -437,7 +456,15 @@ fn build_connector_rolegroup_config_map(
                 ))
                 .build(),
         )
-        .add_data(CONFIG_PROPERTIES, config_properties);
+        .add_data(CONFIG_PROPERTIES, config_properties)
+        .add_data(
+            JVM_SECURITY_PROPERTIES,
+            to_java_properties_string(jvm_sec_props.iter()).with_context(|_| {
+                JvmSecurityPropertiesSnafu {
+                    rolegroup: rolegroup.role_group.clone(),
+                }
+            })?,
+        );
 
     extend_role_group_config_map(
         rolegroup,
@@ -571,6 +598,11 @@ fn build_server_rolegroup_statefulset(
             java_cmd.push(format!("-D{}=$(cat {})", EDC_IONOS_SECRET_KEY, path));
         }
     }
+
+    // JVM security properties configured via configOverrides
+    java_cmd.push(format!(
+        "-Djava.security.properties={STACKABLE_CONFIG_DIR}/{JVM_SECURITY_PROPERTIES}"
+    ));
 
     // We add this at the and, as the .jar file should be the last argument to the call to the java binary
     java_cmd.extend(vec!["-jar".to_string(), "connector.jar".to_string()]);
