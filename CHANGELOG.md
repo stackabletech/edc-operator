@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Configuration overrides for the JVM security properties, such as DNS caching ([#24]).
+
 ### Changed
 
 - Operator-rs: `0.46.0` ([#20], [#21]).
@@ -12,3 +16,4 @@ All notable changes to this project will be documented in this file.
 
 [#20]: https://github.com/stackabletech/edc-operator/pull/20
 [#21]: https://github.com/stackabletech/edc-operator/pull/21
+[#24]: https://github.com/stackabletech/edc-operator/pull/24
