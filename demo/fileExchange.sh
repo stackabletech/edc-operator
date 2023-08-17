@@ -101,7 +101,7 @@ curl -X POST http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/catalog/request \
       },
       "providerUrl": "http://PROVIDER_IP:8282/protocol",
       "protocol": "dataspace-protocol-http"
-    }
+    }'
 
 read -p $'\n\nPress enter to continue'
 
@@ -110,32 +110,33 @@ echo "Step 5: Contract Negotiation"
 
 JSON_PAYLOAD=$(cat <<-EOF
 {
-  "connectorId": "multicloud-push-provider",
-  "connectorAddress": "http://provider:8282/api/management/v2",
-  "protocol": "ids-multipart",
+  "@context": {
+    "edc": "https://w3id.org/edc/v0.0.1/ns/",
+    "odrl": "http://www.w3.org/ns/odrl/2/"
+  },
+  "@type": "NegotiationInitiateRequestDto",
+  "connectorId": "provider",
+  "connectorAddress": "http://provider:8282/protocol",
+  "protocol": "dataspace-protocol-http",
   "offer": {
-    "offerId": "1:50f75a7a-5f81-4764-b2f9-ac258c3628e2",
-    "assetId": "assetId",
-    "policy": {
-      "uid": "231802-bb34-11ec-8422-0242ac120002",
-      "permissions": [
-        {
-        "target": "assetId",
-        "action": {
-            "type": "USE"
-        },
-        "edctype": "dataspaceconnector:permission"
+    "offerId": "1:1:a345ad85-c240-4195-b954-13841a6331a1",
+    "assetId": "1",
+    "policy": {"@id":"$OFFER_POLICY",
+      "@type": "odrl:Set",
+      "odrl:permission": {
+        "odrl:target": "1",
+        "odrl:action": {
+          "odrl:type": "USE"
         }
-      ],
-      "@type": {
-        "@policytype": "set"
-      }
-    }
+      },
+      "odrl:prohibition": [],
+      "odrl:obligation": [],
+      "odrl:target": "1"}
   }
 }
 EOF
 )
-ID=$(curl -s -X POST -H 'X-API-Key: password' -H 'content-type: application/json' -d "$JSON_PAYLOAD" "http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/contractnegotiations" | jq -r '.id')
+ID=$(curl -s -X POST -H 'X-API-Key: password' -H 'content-type: application/json' -d "$JSON_PAYLOAD" "http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/contractnegotiations" | jq -r '.["@id"]')
 echo $ID
 
 # This step takes a bit of time, sleep a bit
@@ -149,7 +150,7 @@ echo "Step 6: Fetching the contract agreement ID"
 
 CONTRACT_AGREEMENT_ID=$(curl -s -X GET "http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/contractnegotiations/$ID" \
 	-H 'X-API-Key: password' \
-  -H 'Content-Type: application/json' | jq -r '.contractAgreementId')
+  -H 'Content-Type: application/json' | jq -r '.["edc:contractAgreementId"]')
 echo $CONTRACT_AGREEMENT_ID
 
 read -p $'\n\nPress enter to continue'
@@ -161,24 +162,25 @@ curl -X POST "http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/transferprocess" 
 -H "Content-Type: application/json" \
 -H 'X-API-Key: password' \
 -d @- <<-EOF
-{
+{	
+  "@context": {
+    "edc": "https://w3id.org/edc/v0.0.1/ns/"
+    },
+  "@type": "TransferRequestDto",
   "connectorId": "consumer",
-  "connectorAddress": "http://provider:8282/management/v2",
+  "connectorAddress": "http://provider:8282/protocol",
+  "protocol": "dataspace-protocol-http",
   "contractId": "$CONTRACT_AGREEMENT_ID",
   "protocol": "ids-multipart",
   "assetId": "assetId",
-  "managedResources": "true",
-  "transferType": {
-    "contentType": "application/octet-stream",
-    "isFinite": true
+  "dataDestination": { 
+    "type": "IonosS3",
+    "storage":"s3-eu-central-1.ionoscloud.com",
+    "bucketName": "$CONSUMER_BUCKET",
+    "keyName" : "device1-data.csv"
+  
   },
-  "dataDestination": {
-    "properties": {
-      "type": "IonosS3",
-      "storage":"s3-eu-central-1.ionoscloud.com",
-      "bucketName": "$DEST_BUCKET"
-    }
-  }
+  "managedResources": false
 }
 EOF
 
