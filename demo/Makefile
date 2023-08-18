@@ -76,3 +76,6 @@ clean:
 	rm manifests/s3-secret.yaml
 	rm manifests/destination-bucket.yaml
 	rm manifests/source-bucket.yaml
+
+reset-edc-pods:
+	kubectl delete pod provider-server-default-0 consumer-server-default-0

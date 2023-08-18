@@ -3,6 +3,8 @@
 
 In this demo, the EDC operator is used to set up two EDC instances (_provider_ and _consumer_) with IONOS S3 buckets as storage. Then a file transfer between the two connectors is performed. The demo is based on the [file-transfer-multiple-instances example](https://github.com/Digital-Ecosystems/edc-ionos-s3/tree/main/example/file-transfer-multiple-instances) by IONOS.
 
+The data exchange is facilitated by the [Dataspace Protocol](https://docs.internationaldataspaces.org/ids-knowledgebase/v/dataspace-protocol/overview/readme). The linked document describes the individual steps, the messages, properties and state machines involved.
+
 ## Setup
 
 What you need to do beforehand
