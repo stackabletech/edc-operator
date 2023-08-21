@@ -53,7 +53,7 @@ read -p $'\n\nPress enter to continue'
 echo "################################################"
 echo "Step 2: Creating the policy in the provider:"
 
-curl http://$PROVIDER_IP:$PROVIDER_PORT/management/v2/policydefinitions \
+curl http://"$PROVIDER_IP":"$PROVIDER_PORT"/management/v2/policydefinitions \
 -H 'X-API-Key: password' \
 -H 'content-type: application/json' \
 -d '{
