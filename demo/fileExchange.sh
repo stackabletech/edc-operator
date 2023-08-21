@@ -75,7 +75,7 @@ read -p $'\n\nPress enter to continue'
 echo "################################################"
 echo "Step 3: Creating the contract in the provider:"
 
-curl http://$PROVIDER_IP:$PROVIDER_PORT/management/v2/contractdefinitions \
+curl http://"$PROVIDER_IP":"$PROVIDER_PORT"/management/v2/contractdefinitions \
 -H 'X-API-Key: password' \
 -H 'content-type: application/json' \
 -d '{
