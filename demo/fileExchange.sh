@@ -93,7 +93,7 @@ read -p $'\n\nPress enter to continue'
 echo "################################################"
 echo "Step 4: Make the consumer fetch the data catalog from the provider:"
 
-CONTRACT_ID=$(curl -s -X POST http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/catalog/request \
+CONTRACT_ID=$(curl -s -X POST http://"$CONSUMER_IP":"$CONSUMER_PORT"/management/v2/catalog/request \
 --header 'X-API-Key: password' \
 --header 'Content-Type: application/json' \
 -d '{
