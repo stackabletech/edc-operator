@@ -19,7 +19,7 @@ echo "################################################"
 echo "################################################"
 echo "Step 1: Creating the asset in the provider:"
 
-curl http://$PROVIDER_IP:$PROVIDER_PORT/management/v2/assets \
+curl http://"$PROVIDER_IP":"$PROVIDER_PORT"/management/v2/assets \
 -H 'X-API-Key: password' \
 -H 'content-type: application/json' \
 -d @- <<-EOF
