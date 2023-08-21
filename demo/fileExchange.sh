@@ -138,7 +138,7 @@ JSON_PAYLOAD=$(cat <<-EOF
 EOF
 )
 ID=$(curl -s -X POST -H 'X-API-Key: password' -H 'content-type: application/json' -d "$JSON_PAYLOAD" "http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/contractnegotiations" | jq -r '.["@id"]')
-echo $ID
+echo "$ID"
 
 # This step takes a bit of time, sleep a bit
 echo "..."
