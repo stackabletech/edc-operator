@@ -152,7 +152,7 @@ echo "Step 6: Fetching the contract agreement ID"
 CONTRACT_AGREEMENT_ID=$(curl -s -X GET "http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/contractnegotiations/$ID" \
 	-H 'X-API-Key: password' \
   -H 'Content-Type: application/json' | jq -r '.["edc:contractAgreementId"]')
-echo $CONTRACT_AGREEMENT_ID
+echo "$CONTRACT_AGREEMENT_ID"
 
 read -p $'\n\nPress enter to continue'
 
