@@ -35,9 +35,10 @@ curl http://$PROVIDER_IP:$PROVIDER_PORT/management/v2/assets \
       }
     },
     "dataAddress": {
+      "type": "AzureStorage",
       "properties": {
-      "bucketName": "$SRC_BUCKET",
-      "container": "$SRC_BUCKET",
+        "bucketName": "$SRC_BUCKET",
+        "container": "$SRC_BUCKET",
         "blobName": "device1-data.csv",
         "storage": "s3-eu-central-1.ionoscloud.com",
         "keyName": "device1-data.csv",
@@ -92,16 +93,18 @@ read -p $'\n\nPress enter to continue'
 echo "################################################"
 echo "Step 4: Make the consumer fetch the data catalog from the provider:"
 
-curl -X POST http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/catalog/request \
+CONTRACT_ID=$(curl -s -X POST http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/catalog/request \
 --header 'X-API-Key: password' \
 --header 'Content-Type: application/json' \
 -d '{
       "@context": {
         "edc": "https://w3id.org/edc/v0.0.1/ns/"
       },
-      "providerUrl": "http://PROVIDER_IP:8282/protocol",
+      "providerUrl": "http://provider:8282/protocol",
       "protocol": "dataspace-protocol-http"
-    }'
+    }' | jq -r '."dcat:dataset"."odrl:hasPolicy"."@id"')
+
+echo "Contract ID: $CONTRACT_ID"
 
 read -p $'\n\nPress enter to continue'
 
@@ -117,21 +120,19 @@ JSON_PAYLOAD=$(cat <<-EOF
   "@type": "NegotiationInitiateRequestDto",
   "connectorId": "provider",
   "connectorAddress": "http://provider:8282/protocol",
+  "consumerId": "consumer",
+  "providerId": "provider",
   "protocol": "dataspace-protocol-http",
   "offer": {
-    "offerId": "1:1:a345ad85-c240-4195-b954-13841a6331a1",
-    "assetId": "1",
-    "policy": {"@id":"$OFFER_POLICY",
-      "@type": "odrl:Set",
-      "odrl:permission": {
-        "odrl:target": "1",
-        "odrl:action": {
-          "odrl:type": "USE"
-        }
-      },
+    "offerId": "$CONTRACT_ID",
+    "assetId": "assetId",
+    "policy": {
+      "@id":"$CONTRACT_ID",
+      "@type": "Set",
+      "odrl:permission": [],
       "odrl:prohibition": [],
       "odrl:obligation": [],
-      "odrl:target": "1"}
+      "odrl:target": "assetId"}
   }
 }
 EOF
@@ -158,7 +159,7 @@ read -p $'\n\nPress enter to continue'
 echo "################################################"
 echo "Step 7: Asset Transfer"
 
-curl -X POST "http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/transferprocess" \
+curl -X POST "http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/transferprocesses" \
 -H "Content-Type: application/json" \
 -H 'X-API-Key: password' \
 -d @- <<-EOF
@@ -171,12 +172,12 @@ curl -X POST "http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/transferprocess" 
   "connectorAddress": "http://provider:8282/protocol",
   "protocol": "dataspace-protocol-http",
   "contractId": "$CONTRACT_AGREEMENT_ID",
-  "protocol": "ids-multipart",
+  "protocol": "dataspace-protocol-http",
   "assetId": "assetId",
   "dataDestination": { 
     "type": "IonosS3",
     "storage":"s3-eu-central-1.ionoscloud.com",
-    "bucketName": "$CONSUMER_BUCKET",
+    "bucketName": "$DEST_BUCKET",
     "keyName" : "device1-data.csv"
   
   },
