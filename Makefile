@@ -96,12 +96,14 @@ apply-crd:
 apply-example:
 	kubectl apply -f manifests/s3-credentials-class.yaml
 	kubectl apply -f manifests/s3-secret.yaml
+	kubectl apply -f manifests/ionos-token.yaml
 	kubectl apply -f manifests/edc.yaml
 	kubectl apply -f manifests/vector-aggregator-discovery.yaml
 
 delete-example:
 	kubectl delete -f manifests/s3-credentials-class.yaml
 	kubectl delete -f manifests/s3-secret.yaml
+	kubectl delete -f manifests/ionos-token.yaml
 	kubectl delete -f manifests/edc.yaml
 	kubectl delete -f manifests/vector-aggregator-discovery.yaml
 
