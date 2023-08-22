@@ -14,9 +14,9 @@ OPERATOR_NAME := edc-operator
 VERSION := $(shell cargo metadata --format-version 1 | jq -r '.packages[] | select(.name=="stackable-${OPERATOR_NAME}") | .version')
 
 DOCKER_REPO := docker.stackable.tech
-ORGANIZATION := stackable
+ORGANIZATION := stackable-experimental
 # this will be overwritten by an environmental variable if called from the github action
-HELM_REPO := https://repo.stackable.tech/repository/helm-dev
+HELM_REPO := https://repo.stackable.tech/repository/helm-experimental
 HELM_CHART_ARTIFACT := target/helm/${OPERATOR_NAME}-${VERSION}.tgz
 
 SHELL=/usr/bin/env bash -euo pipefail

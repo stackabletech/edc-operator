@@ -5,7 +5,7 @@ metadata:
   name: provider
 spec:
   image:
-    custom: docker.stackable.tech/sandbox/edc:update-test-stackable0.0.0-dev
+    custom: docker.stackable.tech/stackable-experimental/edc:0.1.2-ionos-technology-preview-stackable0.0.0-dev
     productVersion: 0.1.2
     pullPolicy: IfNotPresent
   clusterConfig:
@@ -26,7 +26,7 @@ metadata:
   name: consumer
 spec:
   image:
-    custom: docker.stackable.tech/sandbox/edc:update-test-stackable0.0.0-dev
+    custom: docker.stackable.tech/stackable-experimental/edc:0.1.2-ionos-technology-preview-stackable0.0.0-dev
     productVersion: 0.1.2
     pullPolicy: IfNotPresent
   clusterConfig:

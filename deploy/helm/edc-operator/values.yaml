@@ -1,7 +1,7 @@
 # Default values for edc-operator.
 ---
 image:
-  repository: docker.stackable.tech/stackable/edc-operator
+  repository: docker.stackable.tech/stackable-experimental/edc-operator
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []

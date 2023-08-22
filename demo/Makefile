@@ -36,7 +36,7 @@ consumer-vault:
     consumer-vault vault
 
 install-operator:
-	helm install --wait --devel --repo https://repo.stackable.tech/repository/helm-dev/ edc-operator edc-operator
+	helm install --wait --devel --repo https://repo.stackable.tech/repository/helm-experimental/ edc-operator edc-operator
 
 cert-secret:
 	kubectl delete secret connector-cert --ignore-not-found
