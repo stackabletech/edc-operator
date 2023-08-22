@@ -46,9 +46,9 @@ If the `DEMO_LOGGING` variable is set, the logging Stack will also be installed 
 
 You can install the Operator with 
 
-    helm install edc-operator stackable-dev/edc-operator --devel
+    helm install edc-operator stackable-experimental/edc-operator --devel
 
-The `stackable-dev` repo is at `https://repo.stackable.tech/repository/helm-dev/`. (Use `helm repo add stackable-dev https://repo.stackable.tech/repository/helm-dev/` to add it).
+The `stackable-experimental` repo is at `https://repo.stackable.tech/repository/helm-experimental/`. (Use `helm repo add stackable-experimental https://repo.stackable.tech/repository/helm-experimental/` to add it).
 
 In the `manifests` directory you will find all the files that get deployed:
 
