@@ -26,8 +26,8 @@ import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import org.eclipse.edc.spi.security.CertificateResolver;
 import org.eclipse.edc.spi.security.PrivateKeyResolver;
-import org.eclipse.edc.spi.system.vault.NoopCertificateResolver;
-import org.eclipse.edc.spi.system.vault.NoopPrivateKeyResolver;
+//import org.eclipse.edc.spi.system.vault.NoopCertificateResolver;
+//import org.eclipse.edc.spi.system.vault.NoopPrivateKeyResolver;
 
 @Provides(S3ConnectorApi.class)
 @Extension(value = S3CoreExtension.NAME)
