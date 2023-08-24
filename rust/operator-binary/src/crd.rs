@@ -45,8 +45,10 @@ pub const JVM_SECURITY_PROPERTIES: &str = "security.properties";
 // secret keys
 pub const STACKABLE_CERT_MOUNT_KEYSTORE: &str = "cert.pfx";
 pub const STACKABLE_CERT_MOUNT_VAULT: &str = "vault.properties";
-// config properties
+// config properties (sorted alphabetically)
 pub const EDC_API_AUTH_KEY: &str = "edc.api.auth.key";
+pub const EDC_DSP_CALLBACK_ADDRESS: &str = "edc.dsp.callback.address";
+pub const EDC_DATAPLANE_TOKEN_VALIDATION_ENDPOINT: &str = "edc.dataplane.token.validation.endpoint";
 pub const EDC_FS_CONFIG: &str = "edc.fs.config";
 pub const EDC_HOSTNAME: &str = "edc.hostname";
 pub const EDC_IDS_ID: &str = "edc.ids.id";
@@ -54,12 +56,7 @@ pub const EDC_IONOS_ACCESS_KEY: &str = "edc.ionos.access.key";
 pub const EDC_IONOS_SECRET_KEY: &str = "edc.ionos.secret.key";
 pub const EDC_IONOS_ENDPOINT: &str = "edc.ionos.endpoint";
 pub const EDC_KEYSTORE: &str = "edc.keystore";
-pub const WEB_HTTP_PORT: &str = "web.http.port";
-pub const WEB_HTTP_PATH: &str = "web.http.path";
-pub const WEB_HTTP_MANAGEMENT_PORT: &str = "web.http.management.port";
-pub const WEB_HTTP_MANAGEMENT_PATH: &str = "web.http.management.path";
-pub const WEB_HTTP_IDS_PORT: &str = "web.http.ids.port";
-pub const WEB_HTTP_IDS_PATH: &str = "web.http.ids.path";
+pub const EDC_PARTICIPANT_ID: &str = "edc.participant.id";
 pub const EDC_VAULT: &str = "edc.vault";
 pub const EDC_VAULT_CERTIFICATE: &str = "edc.vault.certificate";
 pub const EDC_VAULT_CLIENTID: &str = "edc.vault.clientid";
@@ -67,23 +64,30 @@ pub const EDC_VAULT_NAME: &str = "edc.vault.name";
 pub const EDC_VAULT_TENANTID: &str = "edc.vault.tenantid";
 pub const EDC_VAULT_HASHICORP_URL: &str = "edc.vault.hashicorp.url";
 pub const EDC_VAULT_HASHICORP_TOKEN: &str = "edc.vault.hashicorp.token";
-pub const IDS_WEBHOOK_ADRESS: &str = "ids.webhook.address";
+pub const WEB_HTTP_PORT: &str = "web.http.port";
+pub const WEB_HTTP_PATH: &str = "web.http.path";
+pub const WEB_HTTP_MANAGEMENT_PORT: &str = "web.http.management.port";
+pub const WEB_HTTP_MANAGEMENT_PATH: &str = "web.http.management.path";
+pub const WEB_HTTP_PROTOCOL_PORT: &str = "web.http.protocol.port";
+pub const WEB_HTTP_PROTOCOL_PATH: &str = "web.http.protocol.path";
+pub const WEB_HTTP_PUBLIC_PORT: &str = "web.http.public.port";
+pub const WEB_HTTP_PUBLIC_PATH: &str = "web.http.public.path";
+pub const WEB_HTTP_CONTROL_PORT: &str = "web.http.control.port";
+pub const WEB_HTTP_CONTROL_PATH: &str = "web.http.control.path";
 // S3
 pub const SECRET_KEY_S3_ACCESS_KEY: &str = "accessKey";
 pub const SECRET_KEY_S3_SECRET_KEY: &str = "secretKey";
 // default ports
 pub const HTTP_PORT_NAME: &str = "http";
 pub const HTTP_PORT: u16 = 8181;
-//pub const CONTROL_PORT_NAME: &str = "control";
-//pub const CONTROL_PORT: u16 = 19192;
+pub const CONTROL_PORT_NAME: &str = "control";
+pub const CONTROL_PORT: u16 = 8283;
 pub const MANAGEMENT_PORT_NAME: &str = "management";
 pub const MANAGEMENT_PORT: u16 = 8182;
-pub const IDS_PORT_NAME: &str = "ids";
-pub const IDS_PORT: u16 = 8282;
-//pub const PROTOCOL_PORT_NAME: &str = "protocol";
-//pub const PROTOCOL_PORT: u16 = 19195;
-//pub const PUBLIC_PORT_NAME: &str = "public";
-//pub const PUBLIC_PORT: u16 = 19291;
+pub const PROTOCOL_PORT_NAME: &str = "protocol";
+pub const PROTOCOL_PORT: u16 = 8282;
+pub const PUBLIC_PORT_NAME: &str = "public";
+pub const PUBLIC_PORT: u16 = 8284;
 
 // logging
 pub const _JAVA_LOGGING: &str = "java-logging.properties";
@@ -328,51 +332,50 @@ impl Configuration for ConnectorConfigFragment {
         if file == CONFIG_PROPERTIES {
             result.insert(EDC_HOSTNAME.to_owned(), Some(name.to_owned()));
             result.insert(EDC_IDS_ID.to_owned(), Some(format!("urn:connector:{name}")));
+            result.insert(EDC_PARTICIPANT_ID.to_owned(), Some(name.to_owned()));
+            result.insert(
+                EDC_DSP_CALLBACK_ADDRESS.to_owned(),
+                Some(format!("http://{name}:{PROTOCOL_PORT}/protocol")),
+            );
             // This is the password you need to pass in to the API via a header
             // It should probably be set in a secret
             result.insert(EDC_API_AUTH_KEY.to_owned(), Some("password".to_owned()));
             // Ports
             result.insert(WEB_HTTP_PORT.to_owned(), Some(HTTP_PORT.to_string()));
             result.insert(WEB_HTTP_PATH.to_owned(), Some("/api".to_owned()));
-            // result.insert(
-            //     WEB_HTTP_CONTROL_PORT.to_owned(),
-            //     Some(CONTROL_PORT.to_string()),
-            // );
-            // result.insert(
-            //     WEB_HTTP_CONTROL_PATH.to_owned(),
-            //     Some("/control".to_owned()),
-            // );
+            result.insert(
+                WEB_HTTP_CONTROL_PORT.to_owned(),
+                Some(CONTROL_PORT.to_string()),
+            );
+            result.insert(
+                WEB_HTTP_CONTROL_PATH.to_owned(),
+                Some("/control".to_owned()),
+            );
             result.insert(
                 WEB_HTTP_MANAGEMENT_PORT.to_owned(),
                 Some(MANAGEMENT_PORT.to_string()),
             );
             result.insert(
                 WEB_HTTP_MANAGEMENT_PATH.to_owned(),
-                Some("/api/v1/data".to_owned()),
+                Some("/management".to_owned()),
             );
-            result.insert(WEB_HTTP_IDS_PORT.to_owned(), Some(IDS_PORT.to_string()));
-            result.insert(WEB_HTTP_IDS_PATH.to_owned(), Some("/api/v1/ids".to_owned()));
-            // result.insert(
-            //     WEB_HTTP_PROTOCOL_PORT.to_owned(),
-            //     Some(PROTOCOL_PORT.to_string()),
-            // );
-            // result.insert(
-            //     WEB_HTTP_PROTOCOL_PATH.to_owned(),
-            //     Some("/dataplane".to_owned()),
-            // );
-            // result.insert(
-            //     WEB_HTTP_PUBLIC_PORT.to_owned(),
-            //     Some(PUBLIC_PORT.to_string()),
-            // );
-            // result.insert(WEB_HTTP_PUBLIC_PATH.to_owned(), Some("/public".to_owned()));
-
-            // result.insert(
-            //     EDC_DATAPLANE_TOKEN_VALIDATION_ENDPOINT.to_owned(),
-            //     Some(format!("http://{}:{}/control/token", name, CONTROL_PORT)),
-            // );
             result.insert(
-                IDS_WEBHOOK_ADRESS.to_owned(),
-                Some(format!("http://{}:{}", name, IDS_PORT)),
+                WEB_HTTP_PROTOCOL_PORT.to_owned(),
+                Some(PROTOCOL_PORT.to_string()),
+            );
+            result.insert(
+                WEB_HTTP_PROTOCOL_PATH.to_owned(),
+                Some("/protocol".to_owned()),
+            );
+            result.insert(
+                WEB_HTTP_PUBLIC_PORT.to_owned(),
+                Some(PUBLIC_PORT.to_string()),
+            );
+            result.insert(WEB_HTTP_PUBLIC_PATH.to_owned(), Some("/public".to_owned()));
+
+            result.insert(
+                EDC_DATAPLANE_TOKEN_VALIDATION_ENDPOINT.to_owned(),
+                Some(format!("http://{}:{}/control/token", name, CONTROL_PORT)),
             );
 
             // result.insert(

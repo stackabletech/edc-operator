@@ -16,9 +16,9 @@ package com.ionos.edc.dataplane.ionos.s3;
 
 import com.ionos.edc.extension.s3.api.S3ConnectorApi;
 import org.eclipse.edc.connector.dataplane.spi.pipeline.DataSource;
+import org.eclipse.edc.connector.dataplane.spi.pipeline.StreamResult;
 import org.eclipse.edc.connector.dataplane.util.sink.ParallelSink;
 import org.eclipse.edc.spi.response.ResponseStatus;
-import org.eclipse.edc.spi.response.StatusResult;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.ByteArrayInputStream;
@@ -38,7 +38,7 @@ public class IonosDataSink extends ParallelSink {
     }
 
     @Override
-    protected StatusResult<Void> transferParts(List<DataSource.Part> parts) {
+    protected StreamResult<Void> transferParts(List<DataSource.Part> parts) {
         for (DataSource.Part part : parts) {
         	 String blobName = part.name();
         
@@ -51,14 +51,14 @@ public class IonosDataSink extends ParallelSink {
             }
         }
 
-        return StatusResult.success();
+        return StreamResult.success();
     }
 
     @NotNull
-    private StatusResult<Void> uploadFailure(Exception e, String blobName) {
+    private StreamResult<Void> uploadFailure(Exception e, String blobName) {
         var message = format("Error writing the %s object on the %s bucket: %s", blobName, bucketName, e.getMessage());
         monitor.severe(message, e);
-        return StatusResult.failure(ResponseStatus.FATAL_ERROR, message);
+        return StreamResult.error(message);
     }
 
     public static class Builder extends ParallelSink.Builder<Builder, IonosDataSink> {

@@ -28,6 +28,7 @@ import org.eclipse.edc.spi.security.VaultCertificateResolver;
 import org.eclipse.edc.spi.security.VaultPrivateKeyResolver;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
+import org.eclipse.edc.spi.types.TypeManager;
 
 @Provides({ Vault.class, PrivateKeyResolver.class, CertificateResolver.class })
 @Extension(value = HashicorpVaultExtension.NAME)
@@ -46,6 +47,9 @@ public class HashicorpVaultExtension implements ServiceExtension {
     private Vault vault;
 
     private PrivateKeyResolver privateKeyResolver;
+
+    @Inject
+    private TypeManager typeManager;
 
     @Override
     public String name() {
@@ -66,7 +70,7 @@ public class HashicorpVaultExtension implements ServiceExtension {
     public void initialize(ServiceExtensionContext context) {
         var config = loadHashicorpVaultClientConfig(context);
 
-        var client = new HashicorpVaultClient(config, httpClient, context.getTypeManager());
+        var client = new HashicorpVaultClient(config, httpClient, typeManager);
 
         vault = new HashicorpVault(client, context.getMonitor());
         privateKeyResolver = new VaultPrivateKeyResolver(vault);

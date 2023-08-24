@@ -5,8 +5,8 @@ metadata:
   name: connector
 spec:
   image:
-    custom: docker.stackable.tech/sandbox/edc:0.0.1-SNAPSHOT-stackable0.0.0-dev
-    productVersion: 0.0.1
+    custom: docker.stackable.tech/stackable-experimental/edc:0.1.2-ionos-technology-preview-stackable0.0.0-dev
+    productVersion: 0.1.2
   clusterConfig:
     listenerClass: external-unstable
     certSecret: connector-cert
