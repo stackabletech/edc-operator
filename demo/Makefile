@@ -1,9 +1,5 @@
 # Set the DEMO_LOGGING environment variable to install logging
 
-
-kind-load:
-	kind load docker-image docker.stackable.tech/sandbox/edc:77c6e17-stackable0.0.0-dev
-
 manifests/source-bucket.yaml:
 	read -rp 'Enter your source bucket name: ' BUCKET && export BUCKET && \
 	yq '.metadata.name = "source-bucket" | .spec.bucketName = env(BUCKET)' example-manifests/bucket.yaml > manifests/source-bucket.yaml
