@@ -22,6 +22,7 @@ import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.spi.security.Vault;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
+import org.eclipse.edc.spi.types.TypeManager;
 
 @Extension(value = DataPlaneIonosS3Extension.NAME)
 public class DataPlaneIonosS3Extension implements ServiceExtension {
@@ -39,6 +40,9 @@ public class DataPlaneIonosS3Extension implements ServiceExtension {
     @Inject
     private Vault vault;
 
+    @Inject
+    private TypeManager typeManager;
+
     @Override
     public String name() {
         return NAME;
@@ -50,11 +54,11 @@ public class DataPlaneIonosS3Extension implements ServiceExtension {
 
         var monitor = context.getMonitor();
         
-        var sourceFactory = new IonosDataSourceFactory(s3Api, monitor);
+        var sourceFactory = new IonosDataSourceFactory(s3Api,typeManager);
         pipelineService.registerFactory(sourceFactory);
         
         var sinkFactory = new IonosDataSinkFactory(s3Api, executorContainer.getExecutorService(), monitor, vault,
-                context.getTypeManager());
+            typeManager);
         pipelineService.registerFactory(sinkFactory);
         context.getMonitor().info("File Transfer Extension initialized!");
     }

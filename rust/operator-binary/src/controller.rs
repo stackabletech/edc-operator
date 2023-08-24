@@ -4,9 +4,10 @@ use crate::OPERATOR_NAME;
 
 use crate::crd::{
     ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, CONFIG_PROPERTIES,
-    EDC_FS_CONFIG, EDC_IONOS_ACCESS_KEY, EDC_IONOS_ENDPOINT, EDC_IONOS_SECRET_KEY, HTTP_PORT,
-    HTTP_PORT_NAME, IDS_PORT, IDS_PORT_NAME, LOGGING_PROPERTIES, MANAGEMENT_PORT,
-    MANAGEMENT_PORT_NAME, SECRET_KEY_S3_ACCESS_KEY, SECRET_KEY_S3_SECRET_KEY, STACKABLE_CERTS_DIR,
+    CONTROL_PORT, CONTROL_PORT_NAME, EDC_FS_CONFIG, EDC_IONOS_ACCESS_KEY, EDC_IONOS_ENDPOINT,
+    EDC_IONOS_SECRET_KEY, HTTP_PORT, HTTP_PORT_NAME, LOGGING_PROPERTIES, MANAGEMENT_PORT,
+    MANAGEMENT_PORT_NAME, PROTOCOL_PORT, PROTOCOL_PORT_NAME, PUBLIC_PORT, PUBLIC_PORT_NAME,
+    SECRET_KEY_S3_ACCESS_KEY, SECRET_KEY_S3_SECRET_KEY, STACKABLE_CERTS_DIR,
     STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CONFIG_DIR,
     STACKABLE_CONFIG_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME,
     STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME, STACKABLE_SECRETS_DIR,
@@ -588,11 +589,10 @@ fn build_server_rolegroup_statefulset(
             STACKABLE_LOG_CONFIG_MOUNT_DIR,
         )
         .add_container_port(HTTP_PORT_NAME, HTTP_PORT.into())
-        //.add_container_port(CONTROL_PORT_NAME, CONTROL_PORT.into())
+        .add_container_port(CONTROL_PORT_NAME, CONTROL_PORT.into())
         .add_container_port(MANAGEMENT_PORT_NAME, MANAGEMENT_PORT.into())
-        .add_container_port(IDS_PORT_NAME, IDS_PORT.into())
-        //.add_container_port(PROTOCOL_PORT_NAME, PROTOCOL_PORT.into())
-        //.add_container_port(PUBLIC_PORT_NAME, PUBLIC_PORT.into())
+        .add_container_port(PROTOCOL_PORT_NAME, PROTOCOL_PORT.into())
+        .add_container_port(PUBLIC_PORT_NAME, PUBLIC_PORT.into())
         .resources(merged_config.resources.clone().into())
         .readiness_probe(Probe {
             initial_delay_seconds: Some(10),
@@ -798,12 +798,12 @@ fn service_ports() -> Vec<ServicePort> {
             protocol: Some("TCP".to_string()),
             ..ServicePort::default()
         },
-        // ServicePort {
-        //     name: Some(CONTROL_PORT_NAME.to_string()),
-        //     port: CONTROL_PORT.into(),
-        //     protocol: Some("TCP".to_string()),
-        //     ..ServicePort::default()
-        // },
+        ServicePort {
+            name: Some(CONTROL_PORT_NAME.to_string()),
+            port: CONTROL_PORT.into(),
+            protocol: Some("TCP".to_string()),
+            ..ServicePort::default()
+        },
         ServicePort {
             name: Some(MANAGEMENT_PORT_NAME.to_string()),
             port: MANAGEMENT_PORT.into(),
@@ -811,23 +811,17 @@ fn service_ports() -> Vec<ServicePort> {
             ..ServicePort::default()
         },
         ServicePort {
-            name: Some(IDS_PORT_NAME.to_string()),
-            port: IDS_PORT.into(),
+            name: Some(PROTOCOL_PORT_NAME.to_string()),
+            port: PROTOCOL_PORT.into(),
             protocol: Some("TCP".to_string()),
             ..ServicePort::default()
         },
-        // ServicePort {
-        //     name: Some(PROTOCOL_PORT_NAME.to_string()),
-        //     port: PROTOCOL_PORT.into(),
-        //     protocol: Some("TCP".to_string()),
-        //     ..ServicePort::default()
-        // },
-        // ServicePort {
-        //     name: Some(PUBLIC_PORT_NAME.to_string()),
-        //     port: PUBLIC_PORT.into(),
-        //     protocol: Some("TCP".to_string()),
-        //     ..ServicePort::default()
-        // },
+        ServicePort {
+            name: Some(PUBLIC_PORT_NAME.to_string()),
+            port: PUBLIC_PORT.into(),
+            protocol: Some("TCP".to_string()),
+            ..ServicePort::default()
+        },
     ]
 }
 

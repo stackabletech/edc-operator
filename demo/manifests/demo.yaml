@@ -5,8 +5,9 @@ metadata:
   name: provider
 spec:
   image:
-    custom: docker.stackable.tech/sandbox/edc:77c6e17-stackable0.0.0-dev
-    productVersion: 0.0.1
+    custom: docker.stackable.tech/stackable-experimental/edc:0.1.2-ionos-technology-preview-stackable0.0.0-dev
+    productVersion: 0.1.2
+    pullPolicy: IfNotPresent
   clusterConfig:
     listenerClass: external-unstable
     certSecret: connector-cert
@@ -25,8 +26,9 @@ metadata:
   name: consumer
 spec:
   image:
-    custom: docker.stackable.tech/sandbox/edc:77c6e17-stackable0.0.0-dev
-    productVersion: 0.0.1
+    custom: docker.stackable.tech/stackable-experimental/edc:0.1.2-ionos-technology-preview-stackable0.0.0-dev
+    productVersion: 0.1.2
+    pullPolicy: IfNotPresent
   clusterConfig:
     listenerClass: external-unstable
     certSecret: connector-cert

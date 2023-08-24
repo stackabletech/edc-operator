@@ -46,6 +46,8 @@ public class IonosProvisionExtension implements ServiceExtension {
     private Vault vault;
     @Inject
     private Monitor monitor;
+    @Inject
+    private TypeManager typeManager;
 
     @Inject
     S3ConnectorApi clientApi;
@@ -75,7 +77,7 @@ public class IonosProvisionExtension implements ServiceExtension {
         var statusCheckerReg = context.getService(StatusCheckerRegistry.class);
         statusCheckerReg.register(IonosBucketSchema.TYPE, new IonosS3StatusChecker(clientApi, retryPolicy));
         monitor.debug("IonosProvisionExtension" + "registerTypes");
-        registerTypes(context.getTypeManager());
+        registerTypes(typeManager);
     }
 
     @Override

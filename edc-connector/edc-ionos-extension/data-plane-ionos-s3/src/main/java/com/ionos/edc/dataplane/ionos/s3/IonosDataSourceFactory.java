@@ -23,6 +23,7 @@ import org.eclipse.edc.connector.dataplane.util.validation.ValidationRule;
 import org.eclipse.edc.spi.EdcException;
 import org.eclipse.edc.spi.monitor.Monitor;
 import org.eclipse.edc.spi.result.Result;
+import org.eclipse.edc.spi.types.TypeManager;
 import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.eclipse.edc.spi.types.domain.transfer.DataFlowRequest;
 import org.jetbrains.annotations.NotNull;
@@ -30,13 +31,13 @@ import org.jetbrains.annotations.NotNull;
 public class IonosDataSourceFactory implements DataSourceFactory {
     private S3ConnectorApi s3Api;
    
-    private final Monitor monitor;
+    private final TypeManager typeManager;
     
     private final ValidationRule<DataAddress> validation = new IonosSourceDataAddressValidationRule();
     
-    public IonosDataSourceFactory(S3ConnectorApi s3Api, Monitor monitor) {
+    public IonosDataSourceFactory(S3ConnectorApi s3Api, TypeManager typeManager) {
         this.s3Api = s3Api;
-        this.monitor = monitor;
+        this.typeManager = typeManager;
     }
 
     @Override
