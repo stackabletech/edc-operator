@@ -12,6 +12,11 @@ use crate::crd::{
     STACKABLE_CONFIG_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME,
     STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME, STACKABLE_SECRETS_DIR,
 };
+use product_config::{
+    types::PropertyNameKind,
+    writer::{to_java_properties_string, PropertiesWriterError},
+    ProductConfigManager,
+};
 use snafu::{OptionExt, ResultExt, Snafu};
 use stackable_operator::builder::resources::ResourceRequirementsBuilder;
 use stackable_operator::builder::{
@@ -21,7 +26,6 @@ use stackable_operator::client::GetApi;
 use stackable_operator::commons::authentication::tls::{CaCert, TlsVerification};
 use stackable_operator::commons::s3::S3ConnectionSpec;
 use stackable_operator::k8s_openapi::api::core::v1::SecretVolumeSource;
-use stackable_operator::product_config::writer::to_java_properties_string;
 use stackable_operator::{
     builder::{ConfigMapBuilder, ContainerBuilder, ObjectMetaBuilder, PodBuilder},
     cluster_resources::{ClusterResourceApplyStrategy, ClusterResources},
@@ -40,7 +44,6 @@ use stackable_operator::{
     labels::{role_group_selector_labels, role_selector_labels, ObjectLabels},
     logging::controller::ReconcilerError,
     memory::{BinaryMultiple, MemoryQuantity},
-    product_config::{types::PropertyNameKind, ProductConfigManager},
     product_config_utils::{transform_all_roles_to_config, validate_all_roles_and_groups_config},
     product_logging::{
         self,
@@ -134,9 +137,7 @@ pub enum Error {
         source: stackable_operator::error::Error,
     },
     #[snafu(display("failed to format runtime properties"))]
-    PropertiesWriteError {
-        source: stackable_operator::product_config::writer::PropertiesWriterError,
-    },
+    PropertiesWriteError { source: PropertiesWriterError },
     #[snafu(display("failed to parse db type {db_type}"))]
     InvalidDbType {
         source: strum::ParseError,
@@ -191,7 +192,7 @@ pub enum Error {
         rolegroup
     ))]
     JvmSecurityProperties {
-        source: stackable_operator::product_config::writer::PropertiesWriterError,
+        source: PropertiesWriterError,
         rolegroup: String,
     },
 }
