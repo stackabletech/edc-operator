@@ -13,6 +13,7 @@ spec:
   image:
     custom: docker.stackable.tech/stackable-experimental/edc:{{ test_scenario['values']['edc']}}
     productVersion: 0.0.1
+    pullPolicy: IfNotPresent
   clusterConfig:
     listenerClass: external-unstable
     certSecret: connector-cert
