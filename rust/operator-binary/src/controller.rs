@@ -20,12 +20,15 @@ use product_config::{
 use snafu::{OptionExt, ResultExt, Snafu};
 use stackable_operator::builder::resources::ResourceRequirementsBuilder;
 use stackable_operator::builder::{
-    PodSecurityContextBuilder, SecretOperatorVolumeSourceBuilder, VolumeBuilder,
+    ObjectMetaBuilderError, PodSecurityContextBuilder, SecretOperatorVolumeSourceBuilder,
+    SecretOperatorVolumeSourceBuilderError, VolumeBuilder,
 };
 use stackable_operator::client::GetApi;
 use stackable_operator::commons::authentication::tls::{CaCert, TlsVerification};
 use stackable_operator::commons::s3::S3ConnectionSpec;
+use stackable_operator::commons::secret_class::SecretClassVolumeError;
 use stackable_operator::k8s_openapi::api::core::v1::SecretVolumeSource;
+use stackable_operator::kvp::{LabelError, Labels};
 use stackable_operator::{
     builder::{ConfigMapBuilder, ContainerBuilder, ObjectMetaBuilder, PodBuilder},
     cluster_resources::{ClusterResourceApplyStrategy, ClusterResources},
@@ -41,7 +44,7 @@ use stackable_operator::{
         apimachinery::pkg::{apis::meta::v1::LabelSelector, util::intstr::IntOrString},
     },
     kube::{runtime::controller::Action, Resource, ResourceExt},
-    labels::{role_group_selector_labels, role_selector_labels, ObjectLabels},
+    kvp::ObjectLabels,
     logging::controller::ReconcilerError,
     memory::{BinaryMultiple, MemoryQuantity},
     product_config_utils::{transform_all_roles_to_config, validate_all_roles_and_groups_config},
@@ -195,6 +198,24 @@ pub enum Error {
         source: PropertiesWriterError,
         rolegroup: String,
     },
+
+    #[snafu(display("failed to build label"))]
+    BuildLabel { source: LabelError },
+
+    #[snafu(display("failed to build object meta data"))]
+    ObjectMeta { source: ObjectMetaBuilderError },
+
+    #[snafu(display("failed to build TLS volume for {volume_name:?}"))]
+    BuildTlsVolume {
+        source: SecretOperatorVolumeSourceBuilderError,
+        volume_name: String,
+    },
+
+    #[snafu(display("failed to convert credentials to volume for {volume_name:?}"))]
+    CredentialsToVolume {
+        source: SecretClassVolumeError,
+        volume_name: String,
+    },
 }
 type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -263,7 +284,9 @@ pub async fn reconcile_edc(edc: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action
     let (rbac_sa, rbac_rolebinding) = build_rbac_resources(
         edc.as_ref(),
         APP_NAME,
-        cluster_resources.get_required_labels(),
+        cluster_resources
+            .get_required_labels()
+            .context(BuildLabelSnafu)?,
     )
     .context(BuildRbacResourcesSnafu)?;
 
@@ -373,25 +396,34 @@ pub fn build_server_role_service(
     let role_svc_name = edc
         .server_role_service_name()
         .context(GlobalServiceNameNotFoundSnafu)?;
+
+    let metadata = ObjectMetaBuilder::new()
+        .name_and_namespace(edc)
+        .name(role_svc_name)
+        .ownerreference_from_resource(edc, None, Some(true))
+        .context(ObjectMissingMetadataForOwnerRefSnafu)?
+        .with_recommended_labels(build_recommended_labels(
+            edc,
+            &resolved_product_image.app_version_label,
+            &role_name,
+            "global",
+        ))
+        .context(ObjectMetaSnafu)?
+        .build();
+
+    let service_selector_labels =
+        Labels::role_selector(edc, APP_NAME, &role_name).context(BuildLabelSnafu)?;
+
+    let service_spec = ServiceSpec {
+        type_: Some(edc.spec.cluster_config.listener_class.k8s_service_type()),
+        ports: Some(service_ports()),
+        selector: Some(service_selector_labels.into()),
+        ..ServiceSpec::default()
+    };
+
     Ok(Service {
-        metadata: ObjectMetaBuilder::new()
-            .name_and_namespace(edc)
-            .name(role_svc_name)
-            .ownerreference_from_resource(edc, None, Some(true))
-            .context(ObjectMissingMetadataForOwnerRefSnafu)?
-            .with_recommended_labels(build_recommended_labels(
-                edc,
-                &resolved_product_image.app_version_label,
-                &role_name,
-                "global",
-            ))
-            .build(),
-        spec: Some(ServiceSpec {
-            type_: Some(edc.spec.cluster_config.listener_class.k8s_service_type()),
-            ports: Some(service_ports()),
-            selector: Some(role_selector_labels(edc, APP_NAME, &role_name)),
-            ..ServiceSpec::default()
-        }),
+        metadata,
+        spec: Some(service_spec),
         status: None,
     })
 }
@@ -440,23 +472,24 @@ fn build_connector_rolegroup_config_map(
         .map(|(k, v)| (k, Some(v)))
         .collect();
 
+    let cm_metadata = ObjectMetaBuilder::new()
+        .name_and_namespace(edc)
+        .name(rolegroup.object_name())
+        .ownerreference_from_resource(edc, None, Some(true))
+        .context(ObjectMissingMetadataForOwnerRefSnafu)?
+        .with_recommended_labels(build_recommended_labels(
+            edc,
+            &resolved_product_image.app_version_label,
+            &rolegroup.role,
+            &rolegroup.role_group,
+        ))
+        .context(ObjectMetaSnafu)?
+        .build();
+
     let mut cm_builder = ConfigMapBuilder::new();
 
     cm_builder
-        .metadata(
-            ObjectMetaBuilder::new()
-                .name_and_namespace(edc)
-                .name(rolegroup.object_name())
-                .ownerreference_from_resource(edc, None, Some(true))
-                .context(ObjectMissingMetadataForOwnerRefSnafu)?
-                .with_recommended_labels(build_recommended_labels(
-                    edc,
-                    &resolved_product_image.app_version_label,
-                    &rolegroup.role,
-                    &rolegroup.role_group,
-                ))
-                .build(),
-        )
+        .metadata(cm_metadata)
         .add_data(CONFIG_PROPERTIES, config_properties)
         .add_data(
             JVM_SECURITY_PROPERTIES,
@@ -492,33 +525,37 @@ fn build_rolegroup_service(
     resolved_product_image: &ResolvedProductImage,
     rolegroup: &RoleGroupRef<EDCCluster>,
 ) -> Result<Service> {
+    let metadata = ObjectMetaBuilder::new()
+        .name_and_namespace(edc)
+        .name(&rolegroup.object_name())
+        .ownerreference_from_resource(edc, None, Some(true))
+        .context(ObjectMissingMetadataForOwnerRefSnafu)?
+        .with_recommended_labels(build_recommended_labels(
+            edc,
+            &resolved_product_image.app_version_label,
+            &rolegroup.role,
+            &rolegroup.role_group,
+        ))
+        .context(ObjectMetaSnafu)?
+        .build();
+
+    let service_selector_labels =
+        Labels::role_group_selector(edc, APP_NAME, &rolegroup.role, &rolegroup.role_group)
+            .context(BuildLabelSnafu)?;
+
+    let service_spec = ServiceSpec {
+        // Internal communication does not need to be exposed
+        type_: Some("ClusterIP".to_string()),
+        cluster_ip: Some("None".to_string()),
+        ports: Some(service_ports()),
+        selector: Some(service_selector_labels.into()),
+        publish_not_ready_addresses: Some(true),
+        ..ServiceSpec::default()
+    };
+
     Ok(Service {
-        metadata: ObjectMetaBuilder::new()
-            .name_and_namespace(edc)
-            .name(&rolegroup.object_name())
-            .ownerreference_from_resource(edc, None, Some(true))
-            .context(ObjectMissingMetadataForOwnerRefSnafu)?
-            .with_recommended_labels(build_recommended_labels(
-                edc,
-                &resolved_product_image.app_version_label,
-                &rolegroup.role,
-                &rolegroup.role_group,
-            ))
-            .build(),
-        spec: Some(ServiceSpec {
-            // Internal communication does not need to be exposed
-            type_: Some("ClusterIP".to_string()),
-            cluster_ip: Some("None".to_string()),
-            ports: Some(service_ports()),
-            selector: Some(role_group_selector_labels(
-                edc,
-                APP_NAME,
-                &rolegroup.role,
-                &rolegroup.role_group,
-            )),
-            publish_not_ready_addresses: Some(true),
-            ..ServiceSpec::default()
-        }),
+        metadata,
+        spec: Some(service_spec),
         status: None,
     })
 }
@@ -652,15 +689,18 @@ fn build_server_rolegroup_statefulset(
         )
         .build();
 
+    let pb_metadata = ObjectMetaBuilder::new()
+        .with_recommended_labels(build_recommended_labels(
+            edc,
+            &resolved_product_image.app_version_label,
+            &rolegroup_ref.role,
+            &rolegroup_ref.role_group,
+        ))
+        .context(ObjectMetaSnafu)?
+        .build();
+
     pod_builder
-        .metadata_builder(|m| {
-            m.with_recommended_labels(build_recommended_labels(
-                edc,
-                &resolved_product_image.app_version_label,
-                &rolegroup_ref.role,
-                &rolegroup_ref.role_group,
-            ))
-        })
+        .metadata(pb_metadata)
         .image_pull_secrets_from_product_image(resolved_product_image)
         .add_container(container_edc)
         .add_volume(stackable_operator::k8s_openapi::api::core::v1::Volume {
@@ -740,40 +780,48 @@ fn build_server_rolegroup_statefulset(
         ));
     }
 
+    let metadata = ObjectMetaBuilder::new()
+        .name_and_namespace(edc)
+        .name(&rolegroup_ref.object_name())
+        .ownerreference_from_resource(edc, None, Some(true))
+        .context(ObjectMissingMetadataForOwnerRefSnafu)?
+        .with_recommended_labels(build_recommended_labels(
+            edc,
+            &resolved_product_image.app_version_label,
+            &rolegroup_ref.role,
+            &rolegroup_ref.role_group,
+        ))
+        .context(ObjectMetaSnafu)?
+        .build();
+
+    let service_match_labels = Labels::role_group_selector(
+        edc,
+        APP_NAME,
+        &rolegroup_ref.role,
+        &rolegroup_ref.role_group,
+    )
+    .context(BuildLabelSnafu)?;
+
+    let service_spec = StatefulSetSpec {
+        pod_management_policy: Some("Parallel".to_string()),
+        replicas: rolegroup.and_then(|rg| rg.replicas).map(i32::from),
+        selector: LabelSelector {
+            match_labels: Some(service_match_labels.into()),
+            ..LabelSelector::default()
+        },
+        service_name: rolegroup_ref.object_name(),
+        template: pod_builder.build_template(),
+        volume_claim_templates: Some(vec![merged_config
+            .resources
+            .storage
+            .data
+            .build_pvc("data", Some(vec!["ReadWriteOnce"]))]),
+        ..StatefulSetSpec::default()
+    };
+
     Ok(StatefulSet {
-        metadata: ObjectMetaBuilder::new()
-            .name_and_namespace(edc)
-            .name(&rolegroup_ref.object_name())
-            .ownerreference_from_resource(edc, None, Some(true))
-            .context(ObjectMissingMetadataForOwnerRefSnafu)?
-            .with_recommended_labels(build_recommended_labels(
-                edc,
-                &resolved_product_image.app_version_label,
-                &rolegroup_ref.role,
-                &rolegroup_ref.role_group,
-            ))
-            .build(),
-        spec: Some(StatefulSetSpec {
-            pod_management_policy: Some("Parallel".to_string()),
-            replicas: rolegroup.and_then(|rg| rg.replicas).map(i32::from),
-            selector: LabelSelector {
-                match_labels: Some(role_group_selector_labels(
-                    edc,
-                    APP_NAME,
-                    &rolegroup_ref.role,
-                    &rolegroup_ref.role_group,
-                )),
-                ..LabelSelector::default()
-            },
-            service_name: rolegroup_ref.object_name(),
-            template: pod_builder.build_template(),
-            volume_claim_templates: Some(vec![merged_config
-                .resources
-                .storage
-                .data
-                .build_pvc("data", Some(vec!["ReadWriteOnce"]))]),
-            ..StatefulSetSpec::default()
-        }),
+        metadata,
+        spec: Some(service_spec),
         status: None,
     })
 }
@@ -785,8 +833,13 @@ fn add_s3_volume_and_volume_mounts(
 ) -> Result<()> {
     if let Some(s3_conn) = s3_conn {
         if let Some(credentials) = &s3_conn.credentials {
-            pb.add_volume(credentials.to_volume("s3-credentials"));
-            cb_druid.add_volume_mount("s3-credentials", STACKABLE_SECRETS_DIR);
+            let volume_name = "s3-credentials";
+            pb.add_volume(
+                credentials
+                    .to_volume(volume_name)
+                    .context(CredentialsToVolumeSnafu { volume_name })?,
+            );
+            cb_druid.add_volume_mount(volume_name, STACKABLE_SECRETS_DIR);
         }
 
         if let Some(tls) = &s3_conn.tls {
@@ -800,7 +853,11 @@ fn add_s3_volume_and_volume_mounts(
 
                             let volume = VolumeBuilder::new(&volume_name)
                                 .ephemeral(
-                                    SecretOperatorVolumeSourceBuilder::new(secret_class).build(),
+                                    SecretOperatorVolumeSourceBuilder::new(secret_class)
+                                        .build()
+                                        .context(BuildTlsVolumeSnafu {
+                                            volume_name: &volume_name,
+                                        })?,
                                 )
                                 .build();
                             pb.add_volume(volume);
