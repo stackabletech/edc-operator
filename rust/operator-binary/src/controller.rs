@@ -834,13 +834,13 @@ fn add_s3_volume_and_volume_mounts(
 ) -> Result<()> {
     if let Some(s3_conn) = s3_conn {
         if let Some(credentials) = &s3_conn.credentials {
-            let volume_name = "s3-credentials";
-            pb.add_volume(
-                credentials
-                    .to_volume(volume_name)
-                    .context(CredentialsToVolumeSnafu { volume_name })?,
-            );
-            cb_druid.add_volume_mount(volume_name, STACKABLE_SECRETS_DIR);
+            const VOLUME_NAME: &'static str = "s3-credentials";
+            pb.add_volume(credentials.to_volume(VOLUME_NAME).context(
+                CredentialsToVolumeSnafu {
+                    volume_name: VOLUME_NAME,
+                },
+            )?);
+            cb_druid.add_volume_mount(VOLUME_NAME, STACKABLE_SECRETS_DIR);
         }
 
         if let Some(tls) = &s3_conn.tls {
