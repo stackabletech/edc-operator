@@ -18,22 +18,23 @@ use product_config::{
     ProductConfigManager,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
-use stackable_operator::builder::resources::ResourceRequirementsBuilder;
-use stackable_operator::builder::{
-    ObjectMetaBuilderError, PodSecurityContextBuilder, SecretOperatorVolumeSourceBuilder,
-    SecretOperatorVolumeSourceBuilderError, VolumeBuilder,
-};
-use stackable_operator::client::GetApi;
-use stackable_operator::commons::authentication::tls::{CaCert, TlsVerification};
-use stackable_operator::commons::s3::S3ConnectionSpec;
-use stackable_operator::commons::secret_class::SecretClassVolumeError;
-use stackable_operator::k8s_openapi::api::core::v1::SecretVolumeSource;
-use stackable_operator::kvp::{LabelError, Labels};
 use stackable_operator::{
-    builder::{ConfigMapBuilder, ContainerBuilder, ObjectMetaBuilder, PodBuilder},
+    builder::{
+        resources::ResourceRequirementsBuilder, ConfigMapBuilder, ContainerBuilder,
+        ObjectMetaBuilder, ObjectMetaBuilderError, PodBuilder, PodSecurityContextBuilder,
+        SecretOperatorVolumeSourceBuilder, SecretOperatorVolumeSourceBuilderError, VolumeBuilder,
+    },
+    client::GetApi,
     cluster_resources::{ClusterResourceApplyStrategy, ClusterResources},
-    commons::{product_image_selection::ResolvedProductImage, rbac::build_rbac_resources},
+    commons::{
+        authentication::tls::{CaCert, TlsVerification},
+        product_image_selection::ResolvedProductImage,
+        rbac::build_rbac_resources,
+        s3::S3ConnectionSpec,
+        secret_class::SecretClassVolumeError,
+    },
     k8s_openapi::{
+        api::core::v1::SecretVolumeSource,
         api::{
             apps::v1::{StatefulSet, StatefulSetSpec},
             core::v1::{
@@ -44,7 +45,7 @@ use stackable_operator::{
         apimachinery::pkg::{apis::meta::v1::LabelSelector, util::intstr::IntOrString},
     },
     kube::{runtime::controller::Action, Resource, ResourceExt},
-    kvp::ObjectLabels,
+    kvp::{LabelError, Labels, ObjectLabels},
     logging::controller::ReconcilerError,
     memory::{BinaryMultiple, MemoryQuantity},
     product_config_utils::{transform_all_roles_to_config, validate_all_roles_and_groups_config},
