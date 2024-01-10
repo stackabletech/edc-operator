@@ -4,13 +4,19 @@
 
 <h1 align="center">Stackable EDC Operator Technology Preview</h1>
 
+![Build Actions Status](https://ci.stackable.tech/buildStatus/icon?job=edc%2doperator%2dit%2dnightly&subject=Integration%20Tests)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/stackabletech/edc-operator/graphs/commit-activity)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-green.svg)](https://docs.stackable.tech/home/stable/contributor/index.html)
+[![License OSL3.0](https://img.shields.io/badge/license-OSL3.0-green)](./LICENSE)
+
+[Documentation](https://docs.stackable.tech//stable/index.html) | [Stackable Data Platform](https://stackable.tech/) | [Platform Docs](https://docs.stackable.tech/) | [Discussions](https://github.com/orgs/stackabletech/discussions) | [Discord](https://discord.gg/7kZ3BNnCAF)
+
 This is a Kubernetes Operator for the [EDC Connector](https://github.com/eclipse-edc/Connector) (Eclipse Dataspace Components Connector).
 It is built with the [IONOS S3 extension](https://github.com/Digital-Ecosystems/edc-ionos-s3).
 
 A demo can be run from the `demo` directory, follow the README file in that directory for more information.
 
 The `jar` file that the Operator runs is built from the `edc-connector` repository.
-
 
 ## About The Stackable Data Platform
 
