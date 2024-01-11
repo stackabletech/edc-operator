@@ -19,7 +19,7 @@ use stackable_operator::{
     kube::{runtime::reflector::ObjectRef, CustomResource, ResourceExt},
     product_config_utils::{ConfigError, Configuration},
     product_logging::{self, spec::Logging},
-    role_utils::{Role, RoleGroup, RoleGroupRef},
+    role_utils::{Role, RoleGroupRef},
     schemars::{self, JsonSchema},
     status::condition::{ClusterCondition, HasStatusCondition},
 };
@@ -519,17 +519,6 @@ impl EDCCluster {
             .get(role_group)
             .map(|rg| rg.config.config.clone())
             .unwrap_or_default();
-
-        if let Some(RoleGroup {
-            selector: Some(selector),
-            ..
-        }) = role.role_groups.get(role_group)
-        {
-            // Migrate old `selector` attribute, see ADR 26 affinities.
-            // TODO Can be removed after support for the old `selector` field is dropped.
-            #[allow(deprecated)]
-            conf_rolegroup.affinity.add_legacy_selector(selector);
-        }
 
         // Merge more specific configs into default config
         // Hierarchy is:
