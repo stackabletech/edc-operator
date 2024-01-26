@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Configuration overrides for the JVM security properties, such as DNS caching ([#24]).
+- Helm: support labels in values.yaml ([#49]).
 
 ### Changed
 
@@ -21,3 +22,4 @@ All notable changes to this project will be documented in this file.
 [#23]: https://github.com/stackabletech/edc-operator/pull/23
 [#24]: https://github.com/stackabletech/edc-operator/pull/24
 [#45]: https://github.com/stackabletech/edc-operator/pull/45
+[#49]: https://github.com/stackabletech/edc-operator/pull/49
