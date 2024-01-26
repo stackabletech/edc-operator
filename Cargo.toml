@@ -1,5 +1,4 @@
 [workspace]
-resolver = "2"
 members = ["rust/operator-binary"]
 resolver = "2"
 
