@@ -32,7 +32,7 @@ spec:
                     ionos:
                       properties:
                         s3:
-                          description: An S3 bucket definition, it can either be a reference to an explicit S3Bucket object, or it can be an inline defintion of a bucket. Read the [S3 resources concept documentation](https://docs.stackable.tech/home/nightly/concepts/s3) to learn more.
+                          description: An S3 bucket definition, it can either be a reference to an explicit S3Bucket object, or it can be an inline definition of a bucket. Read the [S3 resources concept documentation](https://docs.stackable.tech/home/nightly/concepts/s3) to learn more.
                           oneOf:
                             - required:
                                 - inline
