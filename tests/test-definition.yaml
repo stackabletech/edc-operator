@@ -3,9 +3,18 @@ dimensions:
   - name: edc
     values:
       - 0.1.2-ionos-technology-preview-stackable0.0.0-dev
+  - name: openshift
+    values:
+      - "false"
 tests:
   - name: smoke
     dimensions:
       - edc
+      - openshift
 suites:
   - name: nightly
+  - name: openshift
+    patch:
+      - dimensions:
+          - name: openshift
+            expr: "true"
