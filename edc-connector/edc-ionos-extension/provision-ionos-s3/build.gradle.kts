@@ -25,6 +25,6 @@ dependencies {
 	
 	testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.1")
 	
-	implementation("dev.failsafe:failsafe:3.2.4")
+	implementation("dev.failsafe:failsafe:3.3.2")
 }
 
