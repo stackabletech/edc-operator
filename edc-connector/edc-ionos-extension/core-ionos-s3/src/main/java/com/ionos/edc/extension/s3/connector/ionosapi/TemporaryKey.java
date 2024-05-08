@@ -4,9 +4,9 @@ public class TemporaryKey {
 
 	public String accessKey;
 	public String secretKey;
-	
-	
-	
+
+
+
 	public TemporaryKey(String accessKey, String secretKey) {
 		super();
 		this.accessKey = accessKey;
@@ -24,6 +24,6 @@ public class TemporaryKey {
 	public void setSecretKey(String secretKey) {
 		this.secretKey = secretKey;
 	}
-	
-	
+
+
 }

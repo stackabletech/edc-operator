@@ -52,7 +52,7 @@ public class ResponseIonosApi {
 	public void set_links(Links _links) {
 		this._links = _links;
 	}
-    
+
 }
 
 class Item {
@@ -78,7 +78,7 @@ class Item {
 		this.href = href;
 	}
 
-    
+
 }
 
 class Links {
@@ -92,5 +92,5 @@ class Links {
 		this.self = self;
 	}
 
-    
+
 }

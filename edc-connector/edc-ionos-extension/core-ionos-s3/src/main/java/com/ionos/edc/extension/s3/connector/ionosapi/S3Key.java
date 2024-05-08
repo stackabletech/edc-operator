@@ -40,7 +40,7 @@ public class S3Key {
 		this.properties = properties;
 	}
 
-  
+
 }
 
 class Metadata {

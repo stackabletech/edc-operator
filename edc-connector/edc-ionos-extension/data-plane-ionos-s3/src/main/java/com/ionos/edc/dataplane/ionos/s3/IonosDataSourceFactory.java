@@ -30,11 +30,11 @@ import org.jetbrains.annotations.NotNull;
 
 public class IonosDataSourceFactory implements DataSourceFactory {
     private S3ConnectorApi s3Api;
-   
+
     private final TypeManager typeManager;
-    
+
     private final ValidationRule<DataAddress> validation = new IonosSourceDataAddressValidationRule();
-    
+
     public IonosDataSourceFactory(S3ConnectorApi s3Api, TypeManager typeManager) {
         this.s3Api = s3Api;
         this.typeManager = typeManager;
@@ -57,9 +57,9 @@ public class IonosDataSourceFactory implements DataSourceFactory {
         if (validationResult.failed()) {
             throw new EdcException(String.join(", ", validationResult.getFailureMessages()));
         }
-        
+
         var source = request.getSourceDataAddress();
-       
+
         return IonosDataSource.Builder.newInstance().client(s3Api).bucketName(source.getProperty(IonosBucketSchema.BUCKET_NAME)).blobName(source.getProperty(IonosBucketSchema.BLOB_NAME))
                 .keyName(source.getKeyName()).build();
     }

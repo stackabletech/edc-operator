@@ -40,16 +40,16 @@ public class IonosDataSinkFactory implements DataSinkFactory {
 
     private static final int CHUNK_SIZE_IN_BYTES = 1024 * 1024 * 500; // 500MB chunk size
     private static final String DEFAULT_STORAGE = "s3-eu-central-1.ionoscloud.com";
-   
+
     private final ExecutorService executorService;
     private final Monitor monitor;
     private S3ConnectorApi s3Api;
-   
+
     private Vault vault;
     private TypeManager typeManager;
 
     private final ValidationRule<DataAddress> validation = new IonosSinkDataAddressValidationRule();
-    
+
     public IonosDataSinkFactory(S3ConnectorApi s3Api, ExecutorService executorService, Monitor monitor,
             Vault vault, TypeManager typeManager) {
         this.s3Api = s3Api;
@@ -77,15 +77,15 @@ public class IonosDataSinkFactory implements DataSinkFactory {
             throw new EdcException(String.join(", ", validationResult.getFailureMessages()));
         }
         var destination = request.getDestinationDataAddress();
-       
+
         var secret = vault.resolveSecret(destination.getKeyName());
-        
+
         S3ConnectorApi s3ApiTemp;
         if (secret != null) {
             var Token = typeManager.readValue(secret, IonosToken.class);
-            
+
             if (destination.getProperty(IonosBucketSchema.STORAGE_NAME)!=null) {
-            	
+
             s3ApiTemp = new S3ConnectorApiImpl(destination.getProperty(IonosBucketSchema.STORAGE_NAME), Token.getAccessKey(), Token.getSecretKey(), "");
             		 return IonosDataSink.Builder.newInstance().bucketName(destination.getProperty(IonosBucketSchema.BUCKET_NAME))
             	                .blobName(destination.getKeyName()).requestId(request.getId()).executorService(executorService)
@@ -96,8 +96,8 @@ public class IonosDataSinkFactory implements DataSinkFactory {
 				   	                .blobName(destination.getKeyName()).requestId(request.getId()).executorService(executorService)
 				   	                .monitor(monitor).s3Api(s3ApiTemp).build();
             }
-        }  
-        
+        }
+
         return IonosDataSink.Builder.newInstance().bucketName(destination.getProperty(IonosBucketSchema.BUCKET_NAME))
                 .blobName(destination.getKeyName()).requestId(request.getId()).executorService(executorService)
                 .monitor(monitor).s3Api(s3Api).build();

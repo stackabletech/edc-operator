@@ -33,7 +33,7 @@ public class IonosS3ConsumerResourceDefinitionGenerator implements ConsumerResou
     public ResourceDefinition generate(DataRequest dataRequest, Policy policy) {
         Objects.requireNonNull(dataRequest, "dataRequest must always be provided");
         Objects.requireNonNull(policy, "policy must always be provided");
-     
+
         var destination = dataRequest.getDataDestination();
         var id = randomUUID().toString();
         var accessKey = destination.getProperty(IonosBucketSchema.ACCESS_KEY_ID);

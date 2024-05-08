@@ -32,7 +32,7 @@ public class IonosDataSink extends ParallelSink {
     private String blobName;
     private String accessKey;
     private String secretkey;
-    
+
     private IonosDataSink() {
 
     }
@@ -41,10 +41,10 @@ public class IonosDataSink extends ParallelSink {
     protected StreamResult<Void> transferParts(List<DataSource.Part> parts) {
         for (DataSource.Part part : parts) {
         	 String blobName = part.name();
-        
+
             try (var input = part.openStream()) {
-               
-               
+
+
                 s3Api.uploadParts(bucketName, blobName, new ByteArrayInputStream(input.readAllBytes()));
             } catch (Exception e) {
                 return uploadFailure(e, blobName);
@@ -85,7 +85,7 @@ public class IonosDataSink extends ParallelSink {
             sink.blobName = blobName;
             return this;
         }
-        
+
         public Builder accessKey(String accessKey) {
             sink.accessKey = accessKey;
             return this;
