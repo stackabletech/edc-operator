@@ -36,17 +36,17 @@ public interface S3ConnectorApi {
     boolean bucketExists(String bucketName);
 
     void uploadFile(String bucketName, String fileName, String path);
-    
+
     void uploadParts(String bucketName, String fileName, ByteArrayInputStream  part);
-    
+
     byte[] getFile(String bucketName, String fileName);
 
     Result<Item> listItems(String bucketName);
 
     void deleteFile(String bucketName, String fileName);
-    
+
     TemporaryKey createTemporaryKey();
-    
+
     void deleteTemporaryKey(String accessKey);
 
 }

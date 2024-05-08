@@ -30,9 +30,9 @@ class IonosDataSource implements DataSource {
     private String blobName;
     private S3ConnectorApi s3Api;
 
-    
+
     private IonosDataSource() {
-        
+
     }
 
     @Override
@@ -87,7 +87,7 @@ class IonosDataSource implements DataSource {
             source.keyName = keyName;
             return this;
         }
-        
+
         public Builder blobName;
 
         public Builder client(S3ConnectorApi s3Api) {

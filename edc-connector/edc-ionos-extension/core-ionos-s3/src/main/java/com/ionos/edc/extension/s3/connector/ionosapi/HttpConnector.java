@@ -14,20 +14,20 @@ import okhttp3.Response;
 public class HttpConnector {
 	OkHttpClient client = new OkHttpClient();
 	String basicUrl = "https://api.ionos.com/cloudapi/v6/um/users/";
-	
-	public String retrieveUserID(String token)  {		
+
+	public String retrieveUserID(String token)  {
 		String[] jwtParts = token.split("\\.");
 		String jwtPayload = new String(java.util.Base64.getDecoder().decode(jwtParts[1]));
 		String uuid = jwtPayload.split("\"uuid\":\"")[1].split("\"")[0];
 
 		return uuid;
 	}
-	
-		
+
+
 	public TemporaryKey createTemporaryKey(String token) {
 		 String url = basicUrl + retrieveUserID(token) + "/s3keys";
-		
-		
+
+
 		Request request = new Request.Builder()
 				   .url(url)
 				   //This adds the token to the header.
@@ -41,15 +41,15 @@ public class HttpConnector {
 
 
 					        ObjectMapper objectMapper = new ObjectMapper();
-					        S3Key resp = objectMapper.readValue(response.body().string(), S3Key.class);					        
+					        S3Key resp = objectMapper.readValue(response.body().string(), S3Key.class);
 					        TemporaryKey temp = new TemporaryKey(resp.getId().toString(),resp.getProperties().get("secretKey").toString());
 					        return temp;
 				    } catch (IOException e) {
 						e.printStackTrace();
 						return new TemporaryKey("", "");
-					}				    
+					}
 	}
-	
+
 	public void deleteTemporaryAccount(String token, String keyID)  {
 		String url = basicUrl + retrieveUserID(token) + "/s3keys/" + keyID;
 
@@ -63,9 +63,9 @@ public class HttpConnector {
 				         if (!response.isSuccessful()){
 				            throw new IOException("Unexpected code " + response);
 				         }
-				     } catch (IOException e) {				
+				     } catch (IOException e) {
 						e.printStackTrace();
 					}
 	}
-	
+
 }

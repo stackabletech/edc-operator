@@ -18,7 +18,7 @@ import io.minio.MinioClient;
 
 public class MinioConnector {
 
-    
+
     public MinioClient connect(String endpoint, String accessKey, String secretKey) {
         MinioClient minioClient = MinioClient.builder().endpoint(endpoint).credentials(accessKey, secretKey).build();
 

@@ -81,28 +81,28 @@ public class IonosS3ResourceDefinition extends ResourceDefinition {
         public static Builder newInstance() {
             return new Builder();
         }
-        
+
         public Builder storage(String storage) {
             resourceDefinition.storage = storage;
             return this;
         }
-        
+
         public Builder accessKey(String accessKey) {
             resourceDefinition.accessKey = accessKey;
             return this;
         }
-        
+
         public Builder secretKey(String secretKey) {
             resourceDefinition.secretKey = secretKey;
             return this;
         }
-        
+
         public Builder bucketName(String bucketName) {
             resourceDefinition.bucketName = bucketName;
             return this;
         }
-        
-        
+
+
 
         @Override
         protected void verify() {

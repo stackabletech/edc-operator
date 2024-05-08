@@ -18,13 +18,12 @@ repositories {
 }
 dependencies {
 
-   
+
 	api("${edcGroup}:runtime-metamodel:${metaModelVersion}")
     implementation(project(":edc-ionos-extension:core-ionos-s3"))
 	implementation("${edcGroup}:transfer-spi:${edcVersion}")
-	
+
 	testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.1")
-	
+
 	implementation("dev.failsafe:failsafe:3.2.4")
 }
-

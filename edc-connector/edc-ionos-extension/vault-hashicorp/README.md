@@ -2,7 +2,7 @@
 
 ## Configuration
 
-| Key | Description | Mandatory | 
+| Key | Description | Mandatory |
 |:---|:---|---|
 | edc.vault.hashicorp.url | URL to connect to the HashiCorp Vault | X |
 | edc.vault.hashicorp.token | Value for [Token Authentication](https://www.vaultproject.io/docs/auth/token) with the vault | X |
