@@ -45,7 +45,7 @@ dependencies {
 
 	implementation("${edcGroup}:http:${edcVersion}")
 
-	testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.1")
+	testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.2")
 
     testImplementation("org.assertj:assertj-core:3.22.0")
     implementation("org.realityforge.org.jetbrains.annotations:org.jetbrains.annotations:1.7.0")
