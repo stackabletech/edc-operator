@@ -1,6 +1,7 @@
 //! This file contains the definition of all the custom resources that this Operator manages.
 //! In this case, it is only the `EDCCluster`.
-use crate::affinity::get_affinity;
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 use snafu::{OptionExt, ResultExt, Snafu};
 use stackable_operator::{
@@ -17,14 +18,15 @@ use stackable_operator::{
     config::{fragment, fragment::Fragment, fragment::ValidationError, merge::Merge},
     k8s_openapi::apimachinery::pkg::api::resource::Quantity,
     kube::{runtime::reflector::ObjectRef, CustomResource, ResourceExt},
-    product_config_utils::{Configuration, Error as ConfigError},
+    product_config_utils::{self, Configuration},
     product_logging::{self, spec::Logging},
     role_utils::{Role, RoleGroupRef},
     schemars::{self, JsonSchema},
     status::condition::{ClusterCondition, HasStatusCondition},
 };
-use std::collections::BTreeMap;
 use strum::{Display, EnumIter};
+
+use crate::affinity::get_affinity;
 
 pub const APP_NAME: &str = "edc";
 // directories
@@ -303,7 +305,7 @@ impl Configuration for ConnectorConfigFragment {
         &self,
         _connector: &Self::Configurable,
         _role_name: &str,
-    ) -> Result<BTreeMap<String, Option<String>>, ConfigError> {
+    ) -> Result<BTreeMap<String, Option<String>>, product_config_utils::Error> {
         let result = BTreeMap::new();
         // no ENV args necessary
         Ok(result)
@@ -313,7 +315,7 @@ impl Configuration for ConnectorConfigFragment {
         &self,
         _connector: &Self::Configurable,
         _role_name: &str,
-    ) -> Result<BTreeMap<String, Option<String>>, ConfigError> {
+    ) -> Result<BTreeMap<String, Option<String>>, product_config_utils::Error> {
         let result = BTreeMap::new();
         // No CLI args necessary
         Ok(result)
@@ -324,7 +326,7 @@ impl Configuration for ConnectorConfigFragment {
         edc: &Self::Configurable,
         _role_name: &str,
         file: &str,
-    ) -> Result<BTreeMap<String, Option<String>>, ConfigError> {
+    ) -> Result<BTreeMap<String, Option<String>>, product_config_utils::Error> {
         let name = edc.name_unchecked();
 
         let mut result = BTreeMap::new();
