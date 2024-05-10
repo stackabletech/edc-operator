@@ -44,7 +44,7 @@ If the `DEMO_LOGGING` variable is set, the logging Stack will also be installed 
 
 ## More info
 
-You can install the Operator with 
+You can install the Operator with
 
     helm install edc-operator stackable-experimental/edc-operator --devel
 

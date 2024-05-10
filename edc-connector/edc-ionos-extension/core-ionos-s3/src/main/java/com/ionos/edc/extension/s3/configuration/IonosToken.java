@@ -31,7 +31,7 @@ public class IonosToken implements SecretToken {
         this.accessKey = accessKey;
         this.secretKey = secretKey;
     }
-   
+
 	public String getAccessKey() {
 		return accessKey;
 	}
@@ -39,12 +39,12 @@ public class IonosToken implements SecretToken {
 	public String getSecretKey() {
 		return secretKey;
 	}
-	
+
 	@Override
 	public long getExpiration() {
 		return expiration;
 	}
 
-	
+
 
 }

@@ -24,4 +24,3 @@ dependencies {
 
     implementation("${edcGroup}:util:${edcVersion}")
 }
-

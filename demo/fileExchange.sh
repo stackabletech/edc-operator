@@ -29,7 +29,7 @@ curl http://"$PROVIDER_IP":"$PROVIDER_PORT"/management/v2/assets \
     },
     "asset": {
       "@id": "assetId",
-      "properties": {    
+      "properties": {
         "name": "product description",
         "contenttype": "application/json"
       }
@@ -163,7 +163,7 @@ curl -X POST "http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/transferprocesses
 -H "Content-Type: application/json" \
 -H 'X-API-Key: password' \
 -d @- <<-EOF
-{	
+{
   "@context": {
     "edc": "https://w3id.org/edc/v0.0.1/ns/"
     },
@@ -174,12 +174,12 @@ curl -X POST "http://$CONSUMER_IP:$CONSUMER_PORT/management/v2/transferprocesses
   "contractId": "$CONTRACT_AGREEMENT_ID",
   "protocol": "dataspace-protocol-http",
   "assetId": "assetId",
-  "dataDestination": { 
+  "dataDestination": {
     "type": "IonosS3",
     "storage":"s3-eu-central-1.ionoscloud.com",
     "bucketName": "$DEST_BUCKET",
     "keyName" : "device1-data.csv"
-  
+
   },
   "managedResources": false
 }

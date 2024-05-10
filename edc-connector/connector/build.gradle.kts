@@ -18,14 +18,14 @@ plugins {
     id("com.github.johnrengelman.shadow") version "7.0.0"
 }
 repositories {
-	
+
     maven {// while runtime-metamodel dependency is still a snapshot
 		url = uri("https://oss.sonatype.org/content/repositories/snapshots/")
     }
 	  maven {
         url = uri("https://maven.iais.fraunhofer.de/artifactory/eis-ids-public/")
     }
-	
+
 	mavenLocal()
 	mavenCentral()
 }
@@ -43,43 +43,43 @@ val fraunhoferVersion: String by project
 
 dependencies {
 	implementation("${edcGroup}:boot:${edcVersion}")
-	
+
     implementation("${edcGroup}:control-plane-core:${edcVersion}")
-	
+
 	implementation("${edcGroup}:api-observability:${edcVersion}")
-	
+
 	implementation("${edcGroup}:configuration-filesystem:${edcVersion}")
 
 	implementation("${edcGroup}:http:${edcVersion}")
-	implementation("${edcGroup}:dsp:${edcVersion}")	
-	
-	implementation("${edcGroup}:auth-tokenbased:${edcVersion}")	
+	implementation("${edcGroup}:dsp:${edcVersion}")
+
+	implementation("${edcGroup}:auth-tokenbased:${edcVersion}")
 
     implementation("$edcGroup:management-api:$edcVersion")
-	
+
 	//Data plane
 	//implementation("${edcGroup}:data-plane-transfer-client:${edcVersion}")
-	
+
 	implementation("${edcGroup}:data-plane-selector-client:${edcVersion}")
-	
+
 	implementation("${edcGroup}:data-plane-selector-core:${edcVersion}")
-	
-	implementation("${edcGroup}:data-plane-core:${edcVersion}")	
-	
+
+	implementation("${edcGroup}:data-plane-core:${edcVersion}")
+
 	implementation("${edcGroup}:iam-mock:${edcVersion}")
-	
+
 	implementation("${edcGroup}:vault-hashicorp:${edcVersion}")
-	
+
 	implementation("${edcGroup}:data-plane-client:${edcVersion}")
 
 	implementation("${edcGroup}:transfer-data-plane:${edcVersion}")
 
-	//Ionos Extension 
+	//Ionos Extension
 	implementation(project(":edc-ionos-extension:provision-ionos-s3"))
 
 	implementation(project(":edc-ionos-extension:data-plane-ionos-s3"))
 
-	testImplementation ("${edcGroup}:junit:${edcVersion}")	
+	testImplementation ("${edcGroup}:junit:${edcVersion}")
 
 
 	implementation("de.fraunhofer.iais.eis.ids.infomodel:java:${fraunhoferVersion}")

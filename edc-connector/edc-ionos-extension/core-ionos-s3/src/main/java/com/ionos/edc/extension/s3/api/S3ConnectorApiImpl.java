@@ -47,22 +47,22 @@ public class S3ConnectorApiImpl implements S3ConnectorApi {
 
     MinioConnector minConnector = new MinioConnector();
     HttpConnector ionosApi = new HttpConnector();
-    
+
     private MinioClient minioClient;
     private String token;
 
-    
+
     public S3ConnectorApiImpl(String endpoint, String accessKey, String secretKey, String token) {
     	if(accessKey != null && secretKey  != null && endpoint !=null)
     		this.minioClient = minConnector.connect(endpoint, accessKey, secretKey);
-        this.token = token; 
+        this.token = token;
     }
 
     @Override
     public void s3ConnectorApi(String endpoint, String accessKey, String secretKey, String token) {
     	if(accessKey != null && secretKey  != null && endpoint !=null)
     		this.minioClient = minConnector.connect(endpoint, accessKey, secretKey);
-        this.token = token; 
+        this.token = token;
     }
 
     @Override
@@ -113,7 +113,7 @@ public class S3ConnectorApiImpl implements S3ConnectorApi {
             }
         }
     }
-    
+
     @Override
     public void uploadParts(String bucketName, String fileName, ByteArrayInputStream  part) {
         if (bucketExists(bucketName.toLowerCase())) {
@@ -176,7 +176,7 @@ public class S3ConnectorApiImpl implements S3ConnectorApi {
 
         boolean found = false;
         try {
-        	
+
             found = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName.toLowerCase()).build());
         } catch (InvalidKeyException | ErrorResponseException | InsufficientDataException | InternalException |
                 InvalidResponseException | NoSuchAlgorithmException | ServerException | XmlParserException |
@@ -186,19 +186,19 @@ public class S3ConnectorApiImpl implements S3ConnectorApi {
         }
         return found;
     }
-    
+
     @Override
     public  TemporaryKey createTemporaryKey() {
-    	
+
 		return ionosApi.createTemporaryKey(token);
-    	
+
     }
- 
+
 	@Override
 	public void deleteTemporaryKey(String accessKey) {
-		
+
 		ionosApi.deleteTemporaryAccount(token,accessKey);
-		
+
 	}
-    
+
 }

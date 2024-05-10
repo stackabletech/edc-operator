@@ -12,7 +12,7 @@
  *       Fraunhofer Institute for Software and Systems Engineering - added dependencies
  *
  */
- 
+
 plugins {
   `java-library`
 }
@@ -34,21 +34,20 @@ val metaModelVersion: String by project
 
 dependencies {
 
-   
+
 	api("${edcGroup}:data-plane-spi:${edcVersion}")
 	implementation("${edcGroup}:transfer-spi:${edcVersion}")
 	implementation("${edcGroup}:data-plane-util:${edcVersion}")
 	implementation(project(":edc-ionos-extension:core-ionos-s3"))
-	
+
     implementation("${edcGroup}:data-plane-core:${edcVersion}")
 	testImplementation("${edcGroup}:data-plane-core:${edcVersion}")
-	
+
 	implementation("${edcGroup}:http:${edcVersion}")
-			
+
 	testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.1")
-	
+
     testImplementation("org.assertj:assertj-core:3.22.0")
     implementation("org.realityforge.org.jetbrains.annotations:org.jetbrains.annotations:1.7.0")
 
 }
-
