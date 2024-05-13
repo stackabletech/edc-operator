@@ -1,5 +1,5 @@
 {
-	"edc.ionos.access.key" : "0094cf3d05be7a2ef637",
-	"edc.ionos.secret.key" : "h0zhhCOy+ucDAfbRrcXemJTj1jxFyLdPB1QLV7rA",
+	"edc.ionos.access.key" : "<YOUR_ACCESS_KEY_HERE>",
+	"edc.ionos.secret.key" : "<YOUR_SECRET_KEY_HERE>",
 	"edc.ionos.endpoint" :  "s3-eu-central-1.ionoscloud.com"
 }
