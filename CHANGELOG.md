@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Bump `stackable-operator` to `0.70.0`, `product-config` to `0.7.0`, and other dependencies  ([#112]).
 - Upgraded to EDC 0.1.2 ([#23]).
 - Operator-rs: `0.46.0` ([#20], [#21]).
 - Switched to workspace dependencies ([#21]).
@@ -23,3 +24,4 @@ All notable changes to this project will be documented in this file.
 [#24]: https://github.com/stackabletech/edc-operator/pull/24
 [#45]: https://github.com/stackabletech/edc-operator/pull/45
 [#49]: https://github.com/stackabletech/edc-operator/pull/49
+[#112]: https://github.com/stackabletech/edc-operator/pull/112
