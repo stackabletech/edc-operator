@@ -1,9 +1,11 @@
+<!-- markdownlint-disable MD041 -->
 <p align="center">
   <img width="150" src="./.readme/static/borrowed/Icon_Stackable.svg" alt="Stackable Logo"/>
 </p>
 
 <h1 align="center">Stackable EDC Operator Technology Preview</h1>
 
+<!-- markdownlint-disable MD041 -->
 ![Build Actions Status](https://ci.stackable.tech/buildStatus/icon?job=edc%2doperator%2dit%2dnightly&subject=Integration%20Tests)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/stackabletech/edc-operator/graphs/commit-activity)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-green.svg)](https://docs.stackable.tech/home/stable/contributor/index.html)
@@ -18,6 +20,7 @@ A demo can be run from the `demo` directory, follow the README file in that dire
 
 The `jar` file that the Operator runs is built from the `edc-connector` repository.
 
+<!-- markdownlint-disable MD041 -->
 ## About The Stackable Data Platform
 
 This operator is written and maintained by [Stackable](https://stackable.tech) and it is part of a larger data platform.
@@ -43,7 +46,6 @@ We develop and test our operators on the following cloud platforms:
 * K3s
 * Kubernetes (for an up to date list of supported versions please check the release notes in our [docs](https://docs.stackable.tech))
 * Red Hat OpenShift
-
 
 ## Other Operators
 
@@ -82,3 +84,5 @@ This is enforced automatically when you submit a Pull Request where a bot will g
 ## Support
 
 Get started with the community edition! If you want professional support, [we offer subscription plans and custom licensing](https://stackable.tech/en/plans/).
+
+<!-- markdownlint-disable MD041 MD022 MD032 -->
