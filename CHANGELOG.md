@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Reduce CRD size from `484KB` to `57KB` by accepting arbitrary YAML input instead of the underlying schema for the following fields ([#118]):
+  - `podOverrides`
+  - `affinity`
+
+[#118]: https://github.com/stackabletech/edc-operator/pull/118
+
+## [24.7.0] - 2024-07-24
+
 ### Added
 
 - Configuration overrides for the JVM security properties, such as DNS caching ([#24]).
