@@ -22,7 +22,16 @@ spec:
       s3:
         reference: destination-bucket
   connectors:
+    envOverrides:
+      COMMON_VAR: role-value # overridden by role group below
+      ROLE_VAR: role-value   # only defined here at role level
+    configOverrides:
+      config.properties:
+        edc.vault.name: role-override
     roleGroups:
+      envOverrides:
+        COMMON_VAR: group-value # overrides role value
+        GROUP_VAR: group-value # only defined here at group level
       default:
         replicas: 1
 ---
