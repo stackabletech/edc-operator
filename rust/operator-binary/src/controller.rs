@@ -539,7 +539,7 @@ fn build_rolegroup_service(
 ) -> Result<Service> {
     let metadata = ObjectMetaBuilder::new()
         .name_and_namespace(edc)
-        .name(&rolegroup.object_name())
+        .name(rolegroup.object_name())
         .ownerreference_from_resource(edc, None, Some(true))
         .context(ObjectMissingMetadataForOwnerRefSnafu)?
         .with_recommended_labels(build_recommended_labels(
@@ -794,7 +794,7 @@ fn build_server_rolegroup_statefulset(
 
     let metadata = ObjectMetaBuilder::new()
         .name_and_namespace(edc)
-        .name(&rolegroup_ref.object_name())
+        .name(rolegroup_ref.object_name())
         .ownerreference_from_resource(edc, None, Some(true))
         .context(ObjectMissingMetadataForOwnerRefSnafu)?
         .with_recommended_labels(build_recommended_labels(
