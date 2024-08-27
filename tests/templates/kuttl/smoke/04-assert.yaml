@@ -1,0 +1,17 @@
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 300
+commands:
+  #
+  # Test envOverrides
+  #
+  - script: |
+      kubectl -n $NAMESPACE get sts consumer-server-default -o yaml | yq -e '.spec.template.spec.containers[] | select (.name == "edc") | .env[] | select (.name == "COMMON_VAR" and .value == "group-value")'
+      kubectl -n $NAMESPACE get sts consumer-server-default -o yaml | yq -e '.spec.template.spec.containers[] | select (.name == "edc") | .env[] | select (.name == "GROUP_VAR" and .value == "group-value")'
+      kubectl -n $NAMESPACE get sts consumer-server-default -o yaml | yq -e '.spec.template.spec.containers[] | select (.name == "edc") | .env[] | select (.name == "ROLE_VAR" and .value == "role-value")'
+  #
+  # Test if role configOverrides are not overwritten by role group compute_files
+  #
+  - script: |
+      kubectl -n $NAMESPACE get cm consumer-server-default -o yaml | yq -e '.data."config.properties"' | grep "edc.vault.name=role-override"
