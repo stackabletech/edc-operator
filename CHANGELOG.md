@@ -10,7 +10,12 @@ All notable changes to this project will be documented in this file.
   - `podOverrides`
   - `affinity`
 
+### Fixed
+
+- BREAKING: Bump op-rs and replace `S3ConnectionDef` with `S3ConnectionInlineOrReference` ([#126]).
+
 [#118]: https://github.com/stackabletech/edc-operator/pull/118
+[#126]: https://github.com/stackabletech/edc-operator/pull/126
 
 ## [24.7.0] - 2024-07-24
 

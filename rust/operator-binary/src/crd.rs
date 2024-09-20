@@ -161,7 +161,7 @@ pub struct EDCClusterConfig {
 #[serde(rename_all = "camelCase")]
 pub struct Ionos {
     pub token_secret: String,
-    pub s3: s3::S3BucketDef,
+    pub s3: s3::S3ConnectionInlineOrReference,
 }
 // TODO: the secret should be mounted as an env var, and then in the secret should be a EDC_IONOS_TOKEN var with the value.
 // The jar should be able to pick it up
