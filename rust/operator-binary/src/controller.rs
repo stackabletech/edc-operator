@@ -18,8 +18,10 @@ use product_config::{
     ProductConfigManager,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
+use stackable_operator::commons::tls_verification::{CaCert, TlsVerification};
 use stackable_operator::{
     builder::{
+        self,
         configmap::ConfigMapBuilder,
         meta::ObjectMetaBuilder,
         pod::{
@@ -36,11 +38,8 @@ use stackable_operator::{
     client::GetApi,
     cluster_resources::{ClusterResourceApplyStrategy, ClusterResources},
     commons::{
-        authentication::tls::{CaCert, TlsVerification},
-        product_image_selection::ResolvedProductImage,
-        rbac::build_rbac_resources,
-        s3::S3ConnectionSpec,
-        secret_class::SecretClassVolumeError,
+        product_image_selection::ResolvedProductImage, rbac::build_rbac_resources,
+        s3::S3ConnectionSpec, secret_class::SecretClassVolumeError,
     },
     k8s_openapi::{
         api::core::v1::SecretVolumeSource,
@@ -60,6 +59,7 @@ use stackable_operator::{
     product_config_utils::{transform_all_roles_to_config, validate_all_roles_and_groups_config},
     product_logging::{
         self,
+        framework::LoggingError,
         spec::{
             ConfigMapLogConfig, ContainerLogConfig, ContainerLogConfigChoice,
             CustomContainerLogConfig,
@@ -158,7 +158,7 @@ pub enum Error {
     },
     #[snafu(display("failed to resolve S3 connection"))]
     ResolveS3Connection {
-        source: stackable_operator::commons::s3::Error,
+        source: stackable_operator::commons::s3::S3Error,
     },
     #[snafu(display("failed to resolve and merge resource config for role and role group"))]
     FailedToResolveResourceConfig { source: crate::crd::Error },
@@ -228,6 +228,17 @@ pub enum Error {
         source: SecretClassVolumeError,
         volume_name: String,
     },
+
+    #[snafu(display("failed to configure logging"))]
+    ConfigureLogging { source: LoggingError },
+
+    #[snafu(display("failed to add needed volume"))]
+    AddVolume { source: builder::pod::Error },
+
+    #[snafu(display("failed to add needed volumeMount"))]
+    AddVolumeMount {
+        source: builder::pod::container::Error,
+    },
 }
 type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -250,6 +261,7 @@ pub async fn reconcile_edc(edc: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action
         .cluster_config
         .ionos
         .s3
+        .clone()
         .resolve(&ctx.client, edc.get_namespace())
         .await
         .context(ResolveS3ConnectionSnafu)?;
@@ -339,7 +351,7 @@ pub async fn reconcile_edc(edc: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action
             &rolegroup,
             rolegroup_config,
             &config,
-            s3_bucket_spec.connection.as_ref(),
+            &s3_bucket_spec,
             vector_aggregator_address.as_deref(),
         )?;
         let rg_statefulset = build_server_rolegroup_statefulset(
@@ -348,7 +360,7 @@ pub async fn reconcile_edc(edc: Arc<EDCCluster>, ctx: Arc<Ctx>) -> Result<Action
             &rolegroup,
             rolegroup_config,
             &config,
-            s3_bucket_spec.connection.as_ref(),
+            &s3_bucket_spec,
             &rbac_sa.name_any(),
         )?;
 
@@ -447,7 +459,7 @@ fn build_connector_rolegroup_config_map(
     rolegroup: &RoleGroupRef<EDCCluster>,
     role_group_config: &HashMap<PropertyNameKind, BTreeMap<String, String>>,
     merged_config: &ConnectorConfig,
-    s3_conn: Option<&S3ConnectionSpec>,
+    s3_conn: &S3ConnectionSpec,
     vector_aggregator_address: Option<&str>,
 ) -> Result<ConfigMap> {
     let mut config_properties = String::new();
@@ -456,10 +468,8 @@ fn build_connector_rolegroup_config_map(
         let mut conf: BTreeMap<String, Option<String>> = Default::default();
         match property_name_kind {
             PropertyNameKind::File(file_name) if file_name == CONFIG_PROPERTIES => {
-                if let Some(conn) = s3_conn {
-                    if let Some(endpoint) = conn.endpoint() {
-                        conf.insert(EDC_IONOS_ENDPOINT.to_string(), Some(endpoint));
-                    }
+                if let Ok(endpoint) = s3_conn.endpoint() {
+                    conf.insert(EDC_IONOS_ENDPOINT.to_string(), Some(endpoint.to_string()));
                 }
 
                 let transformed_config: BTreeMap<String, Option<String>> = config
@@ -582,7 +592,7 @@ fn build_server_rolegroup_statefulset(
     rolegroup_ref: &RoleGroupRef<EDCCluster>,
     metastore_config: &HashMap<PropertyNameKind, BTreeMap<String, String>>,
     merged_config: &ConnectorConfig,
-    s3_conn: Option<&S3ConnectionSpec>,
+    s3_conn: &S3ConnectionSpec,
     sa_name: &str,
 ) -> Result<StatefulSet> {
     let rolegroup = edc
@@ -640,13 +650,11 @@ fn build_server_rolegroup_statefulset(
     ));
 
     // Add S3 secret and access keys from the files mounted by the secret Operator
-    if let Some(c) = s3_conn {
-        if c.credentials.is_some() {
-            let path = format!("{}/{}", STACKABLE_SECRETS_DIR, SECRET_KEY_S3_ACCESS_KEY);
-            java_cmd.push(format!("-D{}=$(cat {})", EDC_IONOS_ACCESS_KEY, path));
-            let path = format!("{}/{}", STACKABLE_SECRETS_DIR, SECRET_KEY_S3_SECRET_KEY);
-            java_cmd.push(format!("-D{}=$(cat {})", EDC_IONOS_SECRET_KEY, path));
-        }
+    if s3_conn.credentials.is_some() {
+        let path = format!("{}/{}", STACKABLE_SECRETS_DIR, SECRET_KEY_S3_ACCESS_KEY);
+        java_cmd.push(format!("-D{}=$(cat {})", EDC_IONOS_ACCESS_KEY, path));
+        let path = format!("{}/{}", STACKABLE_SECRETS_DIR, SECRET_KEY_S3_SECRET_KEY);
+        java_cmd.push(format!("-D{}=$(cat {})", EDC_IONOS_SECRET_KEY, path));
     }
 
     // JVM security properties configured via configOverrides
@@ -663,12 +671,16 @@ fn build_server_rolegroup_statefulset(
         .args(vec![format!("{}", java_cmd.join(" "))])
         .image_from_product_image(resolved_product_image)
         .add_volume_mount(STACKABLE_CONFIG_DIR_NAME, STACKABLE_CONFIG_DIR)
+        .context(AddVolumeMountSnafu)?
         .add_volume_mount(STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CERT_MOUNT_DIR)
+        .context(AddVolumeMountSnafu)?
         .add_volume_mount(STACKABLE_LOG_DIR_NAME, STACKABLE_LOG_DIR)
+        .context(AddVolumeMountSnafu)?
         .add_volume_mount(
             STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME,
             STACKABLE_LOG_CONFIG_MOUNT_DIR,
         )
+        .context(AddVolumeMountSnafu)?
         .add_container_port(HTTP_PORT_NAME, HTTP_PORT.into())
         .add_container_port(CONTROL_PORT_NAME, CONTROL_PORT.into())
         .add_container_port(MANAGEMENT_PORT_NAME, MANAGEMENT_PORT.into())
@@ -718,11 +730,12 @@ fn build_server_rolegroup_statefulset(
         .add_volume(stackable_operator::k8s_openapi::api::core::v1::Volume {
             name: STACKABLE_CONFIG_DIR_NAME.to_string(),
             config_map: Some(ConfigMapVolumeSource {
-                name: Some(rolegroup_ref.object_name()),
+                name: rolegroup_ref.object_name(),
                 ..Default::default()
             }),
             ..Default::default()
         })
+        .context(AddVolumeSnafu)?
         .add_volume(Volume {
             name: STACKABLE_LOG_DIR_NAME.to_string(),
             empty_dir: Some(EmptyDirVolumeSource {
@@ -733,6 +746,7 @@ fn build_server_rolegroup_statefulset(
             }),
             ..Volume::default()
         })
+        .context(AddVolumeSnafu)?
         .add_volume(Volume {
             name: STACKABLE_CERT_MOUNT_DIR_NAME.to_string(),
             secret: Some(SecretVolumeSource {
@@ -741,6 +755,7 @@ fn build_server_rolegroup_statefulset(
             }),
             ..Default::default()
         })
+        .context(AddVolumeSnafu)?
         .affinity(&merged_config.affinity)
         .service_account_name(sa_name)
         .security_context(
@@ -758,38 +773,45 @@ fn build_server_rolegroup_statefulset(
             })),
     }) = merged_config.logging.containers.get(&Container::Connector)
     {
-        pod_builder.add_volume(Volume {
-            name: STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME.to_string(),
-            config_map: Some(ConfigMapVolumeSource {
-                name: Some(config_map.into()),
-                ..ConfigMapVolumeSource::default()
-            }),
-            ..Volume::default()
-        });
+        pod_builder
+            .add_volume(Volume {
+                name: STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME.to_string(),
+                config_map: Some(ConfigMapVolumeSource {
+                    name: config_map.into(),
+                    ..ConfigMapVolumeSource::default()
+                }),
+                ..Volume::default()
+            })
+            .context(AddVolumeSnafu)?;
     } else {
-        pod_builder.add_volume(Volume {
-            name: STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME.to_string(),
-            config_map: Some(ConfigMapVolumeSource {
-                name: Some(rolegroup_ref.object_name()),
-                ..ConfigMapVolumeSource::default()
-            }),
-            ..Volume::default()
-        });
+        pod_builder
+            .add_volume(Volume {
+                name: STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME.to_string(),
+                config_map: Some(ConfigMapVolumeSource {
+                    name: rolegroup_ref.object_name(),
+                    ..ConfigMapVolumeSource::default()
+                }),
+                ..Volume::default()
+            })
+            .context(AddVolumeSnafu)?;
     }
 
     if merged_config.logging.enable_vector_agent {
-        pod_builder.add_container(product_logging::framework::vector_container(
-            resolved_product_image,
-            STACKABLE_CONFIG_DIR_NAME,
-            STACKABLE_LOG_DIR_NAME,
-            merged_config.logging.containers.get(&Container::Vector),
-            ResourceRequirementsBuilder::new()
-                .with_cpu_request("250m")
-                .with_cpu_limit("500m")
-                .with_memory_request("128Mi")
-                .with_memory_limit("128Mi")
-                .build(),
-        ));
+        pod_builder.add_container(
+            product_logging::framework::vector_container(
+                resolved_product_image,
+                STACKABLE_CONFIG_DIR_NAME,
+                STACKABLE_LOG_DIR_NAME,
+                merged_config.logging.containers.get(&Container::Vector),
+                ResourceRequirementsBuilder::new()
+                    .with_cpu_request("250m")
+                    .with_cpu_limit("500m")
+                    .with_memory_request("128Mi")
+                    .with_memory_limit("128Mi")
+                    .build(),
+            )
+            .context(ConfigureLoggingSnafu)?,
+        );
     }
 
     let metadata = ObjectMetaBuilder::new()
@@ -839,48 +861,51 @@ fn build_server_rolegroup_statefulset(
 }
 
 fn add_s3_volume_and_volume_mounts(
-    s3_conn: Option<&S3ConnectionSpec>,
+    s3_conn: &S3ConnectionSpec,
     cb_druid: &mut ContainerBuilder,
     pb: &mut PodBuilder,
 ) -> Result<()> {
-    if let Some(s3_conn) = s3_conn {
-        if let Some(credentials) = &s3_conn.credentials {
-            const VOLUME_NAME: &str = "s3-credentials";
-            pb.add_volume(credentials.to_volume(VOLUME_NAME).context(
-                CredentialsToVolumeSnafu {
+    if let Some(credentials) = &s3_conn.credentials {
+        const VOLUME_NAME: &str = "s3-credentials";
+        pb.add_volume(
+            credentials
+                .to_volume(VOLUME_NAME)
+                .context(CredentialsToVolumeSnafu {
                     volume_name: VOLUME_NAME,
-                },
-            )?);
-            cb_druid.add_volume_mount(VOLUME_NAME, STACKABLE_SECRETS_DIR);
-        }
+                })?,
+        )
+        .context(AddVolumeSnafu)?;
+        cb_druid
+            .add_volume_mount(VOLUME_NAME, STACKABLE_SECRETS_DIR)
+            .context(AddVolumeMountSnafu)?;
+    }
 
-        if let Some(tls) = &s3_conn.tls {
-            match &tls.verification {
-                TlsVerification::None {} => return S3TlsNoVerificationNotSupportedSnafu.fail(),
-                TlsVerification::Server(server_verification) => {
-                    match &server_verification.ca_cert {
-                        CaCert::WebPki {} => {}
-                        CaCert::SecretClass(secret_class) => {
-                            let volume_name = format!("{secret_class}-tls-certificate");
+    if let Some(tls) = &s3_conn.tls.tls {
+        match &tls.verification {
+            TlsVerification::None {} => return S3TlsNoVerificationNotSupportedSnafu.fail(),
+            TlsVerification::Server(server_verification) => match &server_verification.ca_cert {
+                CaCert::WebPki {} => {}
+                CaCert::SecretClass(secret_class) => {
+                    let volume_name = format!("{secret_class}-tls-certificate");
 
-                            let volume = VolumeBuilder::new(&volume_name)
-                                .ephemeral(
-                                    SecretOperatorVolumeSourceBuilder::new(secret_class)
-                                        .build()
-                                        .context(BuildTlsVolumeSnafu {
-                                            volume_name: &volume_name,
-                                        })?,
-                                )
-                                .build();
-                            pb.add_volume(volume);
-                            cb_druid.add_volume_mount(
-                                &volume_name,
-                                format!("{STACKABLE_CERTS_DIR}/{volume_name}"),
-                            );
-                        }
-                    }
+                    let volume = VolumeBuilder::new(&volume_name)
+                        .ephemeral(
+                            SecretOperatorVolumeSourceBuilder::new(secret_class)
+                                .build()
+                                .context(BuildTlsVolumeSnafu {
+                                    volume_name: &volume_name,
+                                })?,
+                        )
+                        .build();
+                    pb.add_volume(volume).context(AddVolumeSnafu)?;
+                    cb_druid
+                        .add_volume_mount(
+                            &volume_name,
+                            format!("{STACKABLE_CERTS_DIR}/{volume_name}"),
+                        )
+                        .context(AddVolumeMountSnafu)?;
                 }
-            }
+            },
         }
     }
 

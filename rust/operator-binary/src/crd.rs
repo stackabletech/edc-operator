@@ -15,7 +15,10 @@ use stackable_operator::{
         },
         s3,
     },
-    config::{fragment, fragment::Fragment, fragment::ValidationError, merge::Merge},
+    config::{
+        fragment::{self, Fragment, ValidationError},
+        merge::Merge,
+    },
     k8s_openapi::apimachinery::pkg::api::resource::Quantity,
     kube::{runtime::reflector::ObjectRef, CustomResource, ResourceExt},
     product_config_utils::{self, Configuration},
@@ -23,6 +26,7 @@ use stackable_operator::{
     role_utils::{Role, RoleGroupRef},
     schemars::{self, JsonSchema},
     status::condition::{ClusterCondition, HasStatusCondition},
+    utils::cluster_domain::KUBERNETES_CLUSTER_DOMAIN,
 };
 use strum::{Display, EnumIter};
 
@@ -161,7 +165,7 @@ pub struct EDCClusterConfig {
 #[serde(rename_all = "camelCase")]
 pub struct Ionos {
     pub token_secret: String,
-    pub s3: s3::S3BucketDef,
+    pub s3: s3::S3ConnectionInlineOrReference,
 }
 // TODO: the secret should be mounted as an env var, and then in the secret should be a EDC_IONOS_TOKEN var with the value.
 // The jar should be able to pick it up
@@ -545,9 +549,12 @@ pub struct PodRef {
 
 impl PodRef {
     pub fn fqdn(&self) -> String {
+        let cluster_domain = KUBERNETES_CLUSTER_DOMAIN
+            .get()
+            .expect("KUBERNETES_CLUSTER_DOMAIN must first be set by calling initialize_operator");
         format!(
-            "{}.{}.{}.svc.cluster.local",
-            self.pod_name, self.role_group_service_name, self.namespace
+            "{}.{}.{}.svc.{}",
+            self.pod_name, self.role_group_service_name, self.namespace, cluster_domain
         )
     }
 }
