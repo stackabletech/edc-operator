@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 
 - The operator can now run on Kubernetes clusters using a non-default cluster domain. It should automatically detect the
   correct domain to use, but you can also use the env var `KUBERNETES_CLUSTER_DOMAIN` to set the domain explicitly
-  or use the helm-chart property `kubernetesClusterDomain` ([#xxx]).
+  or use the helm-chart property `kubernetesClusterDomain` ([#130]).
 
 ### Changed
 
@@ -17,7 +17,7 @@ All notable changes to this project will be documented in this file.
   - `affinity`
 
 [#118]: https://github.com/stackabletech/edc-operator/pull/118
-[#xxx]: https://github.com/stackabletech/edc-operator/pull/xxx
+[#130]: https://github.com/stackabletech/edc-operator/pull/130
 
 ## [24.7.0] - 2024-07-24
 
