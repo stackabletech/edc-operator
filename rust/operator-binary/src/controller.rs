@@ -1,17 +1,11 @@
 //! Ensures that `Pod`s are configured and running for each [`EDCCluster`]
-use crate::product_logging::{extend_role_group_config_map, resolve_vector_aggregator_address};
-use crate::OPERATOR_NAME;
-
-use crate::crd::{
-    ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME, CONFIG_PROPERTIES,
-    CONTROL_PORT, CONTROL_PORT_NAME, EDC_FS_CONFIG, EDC_IONOS_ACCESS_KEY, EDC_IONOS_ENDPOINT,
-    EDC_IONOS_SECRET_KEY, HTTP_PORT, HTTP_PORT_NAME, JVM_SECURITY_PROPERTIES, LOGGING_PROPERTIES,
-    MANAGEMENT_PORT, MANAGEMENT_PORT_NAME, PROTOCOL_PORT, PROTOCOL_PORT_NAME, PUBLIC_PORT,
-    PUBLIC_PORT_NAME, SECRET_KEY_S3_ACCESS_KEY, SECRET_KEY_S3_SECRET_KEY, STACKABLE_CERTS_DIR,
-    STACKABLE_CERT_MOUNT_DIR, STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CONFIG_DIR,
-    STACKABLE_CONFIG_DIR_NAME, STACKABLE_LOG_CONFIG_MOUNT_DIR, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME,
-    STACKABLE_LOG_DIR, STACKABLE_LOG_DIR_NAME, STACKABLE_SECRETS_DIR,
+use std::{
+    borrow::Cow,
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+    time::Duration,
 };
+
 use product_config::{
     types::PropertyNameKind,
     writer::{to_java_properties_string, PropertiesWriterError},
@@ -43,12 +37,11 @@ use stackable_operator::{
         secret_class::SecretClassVolumeError,
     },
     k8s_openapi::{
-        api::core::v1::SecretVolumeSource,
         api::{
             apps::v1::{StatefulSet, StatefulSetSpec},
             core::v1::{
-                ConfigMap, ConfigMapVolumeSource, EmptyDirVolumeSource, Probe, Service,
-                ServicePort, ServiceSpec, TCPSocketAction, Volume,
+                ConfigMap, ConfigMapVolumeSource, EmptyDirVolumeSource, Probe, SecretVolumeSource,
+                Service, ServicePort, ServiceSpec, TCPSocketAction, Volume,
             },
         },
         apimachinery::pkg::{apis::meta::v1::LabelSelector, util::intstr::IntOrString},
@@ -71,14 +64,24 @@ use stackable_operator::{
         statefulset::StatefulSetConditionBuilder,
     },
 };
-use std::{
-    borrow::Cow,
-    collections::{BTreeMap, HashMap},
-    sync::Arc,
-    time::Duration,
-};
 use strum::EnumDiscriminants;
 use tracing::warn;
+
+use crate::{
+    crd::{
+        ConnectorConfig, Container, EDCCluster, EDCClusterStatus, EDCRole, APP_NAME,
+        CONFIG_PROPERTIES, CONTROL_PORT, CONTROL_PORT_NAME, EDC_FS_CONFIG, EDC_IONOS_ACCESS_KEY,
+        EDC_IONOS_ENDPOINT, EDC_IONOS_SECRET_KEY, HTTP_PORT, HTTP_PORT_NAME,
+        JVM_SECURITY_PROPERTIES, LOGGING_PROPERTIES, MANAGEMENT_PORT, MANAGEMENT_PORT_NAME,
+        PROTOCOL_PORT, PROTOCOL_PORT_NAME, PUBLIC_PORT, PUBLIC_PORT_NAME, SECRET_KEY_S3_ACCESS_KEY,
+        SECRET_KEY_S3_SECRET_KEY, STACKABLE_CERTS_DIR, STACKABLE_CERT_MOUNT_DIR,
+        STACKABLE_CERT_MOUNT_DIR_NAME, STACKABLE_CONFIG_DIR, STACKABLE_CONFIG_DIR_NAME,
+        STACKABLE_LOG_CONFIG_MOUNT_DIR, STACKABLE_LOG_CONFIG_MOUNT_DIR_NAME, STACKABLE_LOG_DIR,
+        STACKABLE_LOG_DIR_NAME, STACKABLE_SECRETS_DIR,
+    },
+    product_logging::{extend_role_group_config_map, resolve_vector_aggregator_address},
+    OPERATOR_NAME,
+};
 
 pub const EDC_CONTROLLER_NAME: &str = "edccluster";
 const DOCKER_IMAGE_BASE_NAME: &str = "edc";

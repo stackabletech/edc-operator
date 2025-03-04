@@ -3,7 +3,7 @@ mod controller;
 mod crd;
 mod product_logging;
 
-use crate::controller::EDC_CONTROLLER_NAME;
+use std::sync::Arc;
 
 use clap::{crate_description, crate_version, Parser};
 use crd::{EDCCluster, APP_NAME};
@@ -18,7 +18,8 @@ use stackable_operator::{
     logging::controller::report_controller_reconciled,
     CustomResourceExt,
 };
-use std::sync::Arc;
+
+use crate::controller::EDC_CONTROLLER_NAME;
 
 mod built_info {
     include!(concat!(env!("OUT_DIR"), "/built.rs"));

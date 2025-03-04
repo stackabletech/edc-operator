@@ -1,18 +1,23 @@
-use crate::controller::MAX_LOG_FILES_SIZE;
-use crate::crd::{Container, EDCCluster, EDC_CONNECTOR_JAVA_LOG_FILE, STACKABLE_LOG_DIR};
 use snafu::{OptionExt, ResultExt, Snafu};
-use stackable_operator::memory::BinaryMultiple;
-use stackable_operator::product_logging::spec::{AutomaticContainerLogConfig, LogLevel};
 use stackable_operator::{
     builder::configmap::ConfigMapBuilder,
     client::Client,
     k8s_openapi::api::core::v1::ConfigMap,
     kube::ResourceExt,
+    memory::BinaryMultiple,
     product_logging::{
         self,
-        spec::{ContainerLogConfig, ContainerLogConfigChoice, Logging},
+        spec::{
+            AutomaticContainerLogConfig, ContainerLogConfig, ContainerLogConfigChoice, LogLevel,
+            Logging,
+        },
     },
     role_utils::RoleGroupRef,
+};
+
+use crate::{
+    controller::MAX_LOG_FILES_SIZE,
+    crd::{Container, EDCCluster, EDC_CONNECTOR_JAVA_LOG_FILE, STACKABLE_LOG_DIR},
 };
 
 #[derive(Snafu, Debug)]
