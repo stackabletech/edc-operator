@@ -6,11 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Bump `stackable-operator` to 0.87.0 ([#156]).
 - Reduce CRD size from `484KB` to `57KB` by accepting arbitrary YAML input instead of the underlying schema for the following fields ([#118]):
   - `podOverrides`
   - `affinity`
 
 [#118]: https://github.com/stackabletech/edc-operator/pull/118
+[#156]: https://github.com/stackabletech/edc-operator/pull/156
 
 ## [24.7.0] - 2024-07-24
 

@@ -13,11 +13,10 @@ use stackable_operator::{
             CpuLimitsFragment, MemoryLimitsFragment, NoRuntimeLimits, NoRuntimeLimitsFragment,
             PvcConfig, PvcConfigFragment, Resources, ResourcesFragment,
         },
-        s3,
+        s3::S3Bucket,
     },
     config::{
-        fragment,
-        fragment::{Fragment, ValidationError},
+        fragment::{self, Fragment, ValidationError},
         merge::Merge,
     },
     k8s_openapi::apimachinery::pkg::api::resource::Quantity,
@@ -107,7 +106,7 @@ pub enum Error {
     FragmentValidationFailure { source: ValidationError },
 }
 
-#[derive(Clone, CustomResource, Debug, Deserialize, JsonSchema, PartialEq, Serialize)]
+#[derive(Clone, CustomResource, Debug, Deserialize, JsonSchema, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[kube(
     group = "edc.stackable.tech",
@@ -135,7 +134,7 @@ pub struct EDCClusterSpec {
     pub connectors: Option<Role<ConnectorConfigFragment>>,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, JsonSchema, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EDCClusterConfig {
     /// Name of the Vector aggregator discovery ConfigMap.
@@ -161,11 +160,11 @@ pub struct EDCClusterConfig {
     pub ionos: Ionos,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, JsonSchema, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Ionos {
     pub token_secret: String,
-    pub s3: s3::S3BucketDef,
+    pub s3: S3Bucket,
 }
 // TODO: the secret should be mounted as an env var, and then in the secret should be a EDC_IONOS_TOKEN var with the value.
 // The jar should be able to pick it up
