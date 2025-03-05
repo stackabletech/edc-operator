@@ -14,18 +14,22 @@ use stackable_operator::{
         apps::v1::StatefulSet,
         core::v1::{ConfigMap, Service},
     },
-    kube::runtime::{watcher, Controller},
+    kube::{
+        core::DeserializeGuard,
+        runtime::{
+            events::{Recorder, Reporter},
+            watcher, Controller,
+        },
+    },
     logging::controller::report_controller_reconciled,
     CustomResourceExt,
 };
 
-use crate::controller::EDC_CONTROLLER_NAME;
+use crate::controller::{FULL_CONTROLLER_NAME, OPERATOR_NAME};
 
 mod built_info {
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
-
-const OPERATOR_NAME: &str = "edc.stackable.tech";
 
 #[derive(Parser)]
 #[clap(about, author)]
@@ -43,6 +47,7 @@ async fn main() -> anyhow::Result<()> {
             product_config,
             watch_namespace,
             tracing_target,
+            cluster_info_opts,
         }) => {
             stackable_operator::logging::initialize_logging(
                 "EDC_OPERATOR_LOG",
@@ -63,11 +68,22 @@ async fn main() -> anyhow::Result<()> {
                 "/etc/stackable/edc-operator/config-spec/properties.yaml",
             ])?;
 
-            let client =
-                stackable_operator::client::create_client(Some(OPERATOR_NAME.to_string())).await?;
+            let client = stackable_operator::client::initialize_operator(
+                Some(OPERATOR_NAME.to_string()),
+                &cluster_info_opts,
+            )
+            .await?;
+
+            let recorder = Arc::new(Recorder::new(
+                client.as_kube_client(),
+                Reporter {
+                    controller: FULL_CONTROLLER_NAME.to_string(),
+                    instance: None,
+                },
+            ));
 
             Controller::new(
-                watch_namespace.get_api::<EDCCluster>(&client),
+                watch_namespace.get_api::<DeserializeGuard<EDCCluster>>(&client),
                 watcher::Config::default(),
             )
             .owns(
@@ -91,14 +107,12 @@ async fn main() -> anyhow::Result<()> {
                     product_config,
                 }),
             )
-            .map(|res| {
-                report_controller_reconciled(
-                    &client,
-                    &format!("{EDC_CONTROLLER_NAME}.{OPERATOR_NAME}"),
-                    &res,
-                );
+            .for_each_concurrent(16, |result| {
+                let recorder = recorder.clone();
+                async move {
+                    report_controller_reconciled(&recorder, FULL_CONTROLLER_NAME, &result).await;
+                }
             })
-            .collect::<()>()
             .await;
         }
     }
