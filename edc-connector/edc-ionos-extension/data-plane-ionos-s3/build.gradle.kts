@@ -47,7 +47,7 @@ dependencies {
 
 	testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.1")
 
-    testImplementation("org.assertj:assertj-core:3.22.0")
+    testImplementation("org.assertj:assertj-core:3.26.3")
     implementation("org.realityforge.org.jetbrains.annotations:org.jetbrains.annotations:1.7.0")
 
 }
